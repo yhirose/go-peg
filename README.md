@@ -67,7 +67,6 @@ func main() {
 TODO
 ----
  * Memoization (Packrat parsing)
- * Skip whitespaces
  * AST generation
 
 License

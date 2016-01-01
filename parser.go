@@ -1,5 +1,9 @@
 package peg
 
+const (
+	WhitespceRuleName = "%whitespace"
+)
+
 // PEG parser generator
 type duplicate struct {
 	name string
@@ -399,14 +403,14 @@ func NewParserWithUserRules(s string, rules map[string]Ope) (p *Parser, err *Err
 	}
 
 	// Check left recursion
-	for name, rule := range data.grammar {
+	for name, r := range data.grammar {
 		lr := &detectLeftRecursion{
 			pos:  -1,
 			name: name,
 			refs: make(map[string]bool),
 			done: false,
 		}
-		rule.accept(lr)
+		r.accept(lr)
 		if lr.pos != -1 {
 			if err == nil {
 				err = &Error{}
@@ -419,6 +423,11 @@ func NewParserWithUserRules(s string, rules map[string]Ope) (p *Parser, err *Err
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Automatic whitespace skipping
+	if r, ok := data.grammar[WhitespceRuleName]; ok {
+		data.grammar[data.start].whitespaceOpe = Wsp(r)
 	}
 
 	p = &Parser{Grammar: data.grammar, start: data.start}

@@ -283,10 +283,8 @@ func TestEnterExitHandlers(t *testing.T) {
 	assert(t, err.Details[0].Msg == msg)
 }
 
-/*
-TEST_CASE("WHITESPACE test", "[general]")
-{
-    peg::parser parser(R"(
+func TestWhitespace(t *testing.T) {
+	parser, _ := NewParser(`
         # Rules
         ROOT         <-  ITEM (',' ITEM)*
         ITEM         <-  WORD / PHRASE
@@ -296,16 +294,14 @@ TEST_CASE("WHITESPACE test", "[general]")
         PHRASE       <-  '"' (!'"' .)* '"'
 
         %whitespace  <-  [ \t\r\n]*
-    )");
+	`)
 
-    auto ret = parser.parse(R"(  one, 	 "two, three",   four  )");
-
-    REQUIRE(ret == true);
+	err := parser.Parse(`  one, 	 "two, three",   four  `, nil)
+	assert(t, err == nil)
 }
 
-TEST_CASE("WHITESPACE test2", "[general]")
-{
-    peg::parser parser(R"(
+func TestWhitespace2(t *testing.T) {
+	parser, _ := NewParser(`
         # Rules
         ROOT         <-  ITEM (',' ITEM)*
         ITEM         <-  '[' < [a-zA-Z0-9_]+ > ']'
@@ -313,22 +309,21 @@ TEST_CASE("WHITESPACE test2", "[general]")
         %whitespace  <-  (SPACE / TAB)*
         SPACE        <-  ' '
         TAB          <-  '\t'
-    )");
+	`)
 
-    vector<string> items;
-    parser["ITEM"] = [&](const SemanticValues& sv) {
-        items.push_back(sv.str());
-    };
+	var items []string
+	parser.Grammar["ITEM"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+		items = append(items, sv.S)
+		return
+	}
 
-    auto ret = parser.parse(R"([one], 	[two] ,[three] )");
-
-    REQUIRE(ret == true);
-    REQUIRE(items.size() == 3);
-    REQUIRE(items[0] == "one");
-    REQUIRE(items[1] == "two");
-    REQUIRE(items[2] == "three");
+	err := parser.Parse(`[one], 	[two] ,[three] `, nil)
+	assert(t, err == nil)
+	assert(t, len(items) == 3)
+	assert(t, items[0] == "one")
+	assert(t, items[1] == "two")
+	assert(t, items[2] == "three")
 }
-*/
 
 func TestSkipToken(t *testing.T) {
 	parser, _ := NewParser(`
@@ -345,24 +340,22 @@ func TestSkipToken(t *testing.T) {
 	assert(t, parser.Parse(" item1, item2 ", nil) == nil)
 }
 
-/*
-TEST_CASE("Skip token test2", "[general]")
-{
-    peg::parser parser(R"(
+func TestSkipToken2(t *testing.T) {
+	parser, _ := NewParser(`
         ROOT        <-  ITEM (',' ITEM)*
         ITEM        <-  ([a-z0-9])+
         %whitespace <-  [ \t]*
-    )");
+	`)
 
-    parser["ROOT"] = [&](const SemanticValues& sv) {
-        REQUIRE(sv.size() == 2);
-    };
+	parser.Grammar["ROOT"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+		assert(t, len(sv.Vs) == 2)
+		return
+	}
 
-    auto ret = parser.parse(" item1, item2 ");
-
-    REQUIRE(ret == true);
+	assert(t, parser.Parse(" item1, item2 ", nil) == nil)
 }
 
+/*
 TEST_CASE("Backtracking test", "[general]")
 {
     parser parser(

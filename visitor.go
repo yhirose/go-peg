@@ -9,7 +9,7 @@ type visitor interface {
 	visitOption(ope *option)
 	visitAndPredicate(ope *andPredicate)
 	visitNotPredicate(ope *notPredicate)
-	visitLiteralString(ope *LiteralString)
+	visitLiteralString(ope *literalString)
 	visitCharacterClass(ope *characterClass)
 	visitAnyCharacter(ope *anyCharacter)
 	visitTokenBoundary(ope *tokenBoundary)
@@ -17,6 +17,7 @@ type visitor interface {
 	visitUser(ope *user)
 	visitReference(ope *reference)
 	visitRule(ope *Rule)
+	visitWhitespace(ope *whitespace)
 }
 
 // abstractVisitor
@@ -30,7 +31,7 @@ func (v *abstractVisitor) visitOneOrMore(ope *oneOrMore)                 {}
 func (v *abstractVisitor) visitOption(ope *option)                       {}
 func (v *abstractVisitor) visitAndPredicate(ope *andPredicate)           {}
 func (v *abstractVisitor) visitNotPredicate(ope *notPredicate)           {}
-func (v *abstractVisitor) visitLiteralString(ope *LiteralString)         {}
+func (v *abstractVisitor) visitLiteralString(ope *literalString)         {}
 func (v *abstractVisitor) visitCharacterClass(ope *characterClass)       {}
 func (v *abstractVisitor) visitAnyCharacter(ope *anyCharacter)           {}
 func (v *abstractVisitor) visitTokenBoundary(ope *tokenBoundary)         {}
@@ -38,6 +39,7 @@ func (v *abstractVisitor) visitIgnore(ope *ignore)                       {}
 func (v *abstractVisitor) visitUser(ope *user)                           {}
 func (v *abstractVisitor) visitReference(ope *reference)                 {}
 func (v *abstractVisitor) visitRule(ope *Rule)                           {}
+func (v *abstractVisitor) visitWhitespace(ope *whitespace)               {}
 
 // tokenChecker
 type tokenChecker struct {
@@ -106,7 +108,7 @@ func (v *detectLeftRecursion) visitOneOrMore(ope *oneOrMore)           { ope.ope
 func (v *detectLeftRecursion) visitOption(ope *option)                 { ope.ope.accept(v); v.done = false }
 func (v *detectLeftRecursion) visitAndPredicate(ope *andPredicate)     { ope.ope.accept(v); v.done = false }
 func (v *detectLeftRecursion) visitNotPredicate(ope *notPredicate)     { ope.ope.accept(v); v.done = false }
-func (v *detectLeftRecursion) visitLiteralString(ope *LiteralString)   { v.done = len(ope.lit) > 0 }
+func (v *detectLeftRecursion) visitLiteralString(ope *literalString)   { v.done = len(ope.lit) > 0 }
 func (v *detectLeftRecursion) visitCharacterClass(ope *characterClass) { v.done = true }
 func (v *detectLeftRecursion) visitAnyCharacter(ope *anyCharacter)     { v.done = true }
 func (v *detectLeftRecursion) visitTokenBoundary(ope *tokenBoundary)   { ope.ope.accept(v) }

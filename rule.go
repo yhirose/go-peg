@@ -34,17 +34,19 @@ type Rule struct {
 	TracerBegin TracerBegin
 	TracerEnd   TracerEnd
 
-	tokenChecker *tokenChecker
+	tokenChecker  *tokenChecker
+	whitespaceOpe Ope
 }
 
 func (r *Rule) Parse(s string, dt Any) (l int, v Any, err *Error) {
 	sv := &SemanticValues{}
 	c := &context{
-		s:           s,
-		errorPos:    -1,
-		messagePos:  -1,
-		tracerBegin: r.TracerBegin,
-		tracerEnd:   r.TracerEnd,
+		s:             s,
+		errorPos:      -1,
+		messagePos:    -1,
+		whitespaceOpe: r.whitespaceOpe,
+		tracerBegin:   r.TracerBegin,
+		tracerEnd:     r.TracerEnd,
 	}
 
 	l = r.parse(s, sv, c, dt)
@@ -80,25 +82,56 @@ func (r *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
 	var v Any
 	tok := s[:]
 
-	chldsv := c.stack.push()
-	defer c.stack.pop()
+	// TODO: Packrat parser support
+	c.ruleStack.push(r)
+	defer c.ruleStack.pop()
+
+	chldsv := c.svStack.push()
+	defer c.svStack.pop()
 
 	if r.Enter != nil {
 		r.Enter(dt)
 	}
-	if r.Exit != nil {
-		defer r.Exit(dt)
+	defer func() {
+		if r.Exit != nil {
+			r.Exit(dt)
+		}
+	}()
+
+	ope := r.Ope
+
+	if !c.inToken && c.whitespaceOpe != nil {
+		if c.ruleStack.size() == 1 {
+			if r.isToken() && !r.hasTokenBoundary() {
+				ope = Seq(c.whitespaceOpe, Tok(r.Ope))
+			} else {
+				ope = Seq(c.whitespaceOpe, r.Ope)
+			}
+		} else if r.isToken() {
+			if !r.hasTokenBoundary() {
+				ope = Seq(Tok(r.Ope), c.whitespaceOpe)
+			} else {
+				ope = Seq(r.Ope, c.whitespaceOpe)
+			}
+		}
 	}
 
-	l := r.Ope.parse(s, chldsv, c, dt)
+	//l := r.Ope.parse(s, chldsv, c, dt)
+	var l int
+	if !c.inToken && r.isToken() {
+		c.inToken = true
+		defer func() { c.inToken = false }()
+		l = ope.parse(s, chldsv, c, dt)
+	} else {
+		l = ope.parse(s, chldsv, c, dt)
+	}
 
-	// TODO: Packrat parser support
+	// Invoke action
 	if success(l) {
-		tok = s[:l]
-
 		if chldsv.isValidString {
 			tok = chldsv.S
 		} else {
+			tok = s[:l]
 			chldsv.S = s[:l]
 		}
 

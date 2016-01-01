@@ -18,31 +18,32 @@ func main() {
 	// Create a PEG parser
 	parser, _ := NewParser(`
         # Grammar for simple calculator...
-        EXPRESSION       <-  TERM (TERM_OPERATOR TERM)*
+        EXPRESSION       <-  _ TERM (TERM_OPERATOR TERM)*
         TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
-        FACTOR           <-  NUMBER / '(' EXPRESSION ')'
-        TERM_OPERATOR    <-  [-+]
-        FACTOR_OPERATOR  <-  [/*]
-        NUMBER           <-  [0-9]+
+        FACTOR           <-  NUMBER / '(' _ EXPRESSION ')' _
+        TERM_OPERATOR    <-  < [-+] > _
+        FACTOR_OPERATOR  <-  < [/*] > _
+        NUMBER           <-  < [0-9]+ > _
+		~_               <-  [ \t]*
     `)
 
 	// Setup actions
 	reduce := func(sv *SemanticValues, dt Any) (Any, error) {
-		ret := sv.ToInt(0)
+		val := sv.ToInt(0)
 		for i := 1; i < len(sv.Vs); i += 2 {
 			num := sv.ToInt(i + 1)
 			switch sv.ToStr(i) {
 			case "+":
-				ret += num
+				val += num
 			case "-":
-				ret -= num
+				val -= num
 			case "*":
-				ret *= num
+				val *= num
 			case "/":
-				ret /= num
+				val /= num
 			}
 		}
-		return ret, nil
+		return val, nil
 	}
 
 	g := parser.Grammar
@@ -54,7 +55,7 @@ func main() {
 	g["NUMBER"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return strconv.Atoi(sv.S) }
 
 	// Parse
-	if val, err := parser.ParseAndGetValue("1+2*3*(4-5+6)/7-8"); err == nil {
+	if val, err := parser.ParseAndGetValue(" 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "); err == nil {
 		fmt.Println(val) // -3
 	} else {
 		fmt.Println(err)

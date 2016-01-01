@@ -1,22 +1,25 @@
 package peg
 
-// Error
+// ErrorDetail
 type ErrorDetail struct {
-	ln  int
-	col int
-	msg string
+	Ln  int
+	Col int
+	Msg string
 }
 
+// Error
 type Error struct {
-	details []ErrorDetail
+	Details []ErrorDetail
 }
 
 func (e *Error) Error() string {
 	return "syntax error..." // TODO: Better error report
 }
 
-// Tracer
+// TracerBegin
 type TracerBegin func(name string, s string, sv *SemanticValues, c *context, dt Any, p int)
+
+// TracerEnd
 type TracerEnd func(name string, s string, sv *SemanticValues, c *context, dt Any, l int)
 
 // Rule
@@ -46,14 +49,14 @@ func (r *Rule) Parse(s string, dt Any) (l int, v Any, err *Error) {
 
 	l = r.parse(s, sv, c, dt)
 
-	if Success(l) && len(sv.Vs) > 0 && sv.Vs[0].V != nil {
+	if success(l) && len(sv.Vs) > 0 && sv.Vs[0].V != nil {
 		v = sv.Vs[0].V
 	}
 
-	if Fail(l) || l != len(s) {
+	if fail(l) || l != len(s) {
 		var pos int
 		var msg string
-		if Fail(l) {
+		if fail(l) {
 			if c.messagePos > -1 {
 				pos = c.messagePos
 				msg = c.message
@@ -67,7 +70,7 @@ func (r *Rule) Parse(s string, dt Any) (l int, v Any, err *Error) {
 		}
 		ln, col := lineInfo(s, pos)
 		err = &Error{}
-		err.details = append(err.details, ErrorDetail{ln, col, msg})
+		err.Details = append(err.Details, ErrorDetail{ln, col, msg})
 	}
 
 	return
@@ -90,7 +93,7 @@ func (r *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
 	l := r.Ope.parse(s, chldsv, c, dt)
 
 	// TODO: Packrat parser support
-	if Success(l) {
+	if success(l) {
 		tok = s[:l]
 
 		if chldsv.isValidString {
@@ -114,7 +117,7 @@ func (r *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
 		}
 	}
 
-	if Success(l) {
+	if success(l) {
 		if r.Ignore == false {
 			sv.Vs = append(sv.Vs, SemanticValue{v, tok})
 		}

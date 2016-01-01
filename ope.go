@@ -1,11 +1,10 @@
 package peg
 
-// Utilities
-func Success(l int) bool {
+func success(l int) bool {
 	return l != -1
 }
 
-func Fail(l int) bool {
+func fail(l int) bool {
 	return l == -1
 }
 
@@ -81,7 +80,7 @@ func (c *context) setErrorPos(s string) {
 	}
 }
 
-func (c *context) trace(name string, s string, sv *SemanticValues, dt Any) {
+func (c *context) traceBegin(name string, s string, sv *SemanticValues, dt Any) {
 	if c.tracerBegin != nil {
 		pos := len(c.s) - len(s)
 		c.tracerBegin(name, s, sv, c, dt, pos)
@@ -100,18 +99,18 @@ type Ope interface {
 	accept(v visitor)
 }
 
-// Sequence
-type Sequence struct {
+// sequence
+type sequence struct {
 	opes []Ope
 }
 
-func (o *Sequence) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("Sequence", s, sv, dt)
+func (o *sequence) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+	c.traceBegin("Sequence", s, sv, dt)
 	defer c.traceEnd("Sequence", s, sv, dt, &l)
 	l = 0
 	for _, ope := range o.opes {
 		chldl := ope.parse(s[l:], sv, c, dt)
-		if Fail(chldl) {
+		if fail(chldl) {
 			l = -1
 			return
 		}
@@ -120,24 +119,24 @@ func (o *Sequence) parse(s string, sv *SemanticValues, c *context, dt Any) (l in
 	return
 }
 
-func (o *Sequence) accept(v visitor) {
+func (o *sequence) accept(v visitor) {
 	v.visitSequence(o)
 }
 
-// PrioritizedChoice
-type PrioritizedChoice struct {
+// prioritizedChoice
+type prioritizedChoice struct {
 	opes []Ope
 }
 
-func (o *PrioritizedChoice) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("PrioritizedChoice", s, sv, dt)
+func (o *prioritizedChoice) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+	c.traceBegin("PrioritizedChoice", s, sv, dt)
 	defer c.traceEnd("PrioritizedChoice", s, sv, dt, &l)
 	id := 0
 	for _, ope := range o.opes {
 		chldsv := c.stack.push()
 		defer c.stack.pop()
 		l = ope.parse(s, chldsv, c, dt)
-		if Success(l) {
+		if success(l) {
 			if len(chldsv.Vs) > 0 {
 				sv.Vs = append(sv.Vs, chldsv.Vs...)
 			}
@@ -153,24 +152,24 @@ func (o *PrioritizedChoice) parse(s string, sv *SemanticValues, c *context, dt A
 	return
 }
 
-func (o *PrioritizedChoice) accept(v visitor) {
+func (o *prioritizedChoice) accept(v visitor) {
 	v.visitPrioritizedChoice(o)
 }
 
-// ZeroOrMore
-type ZeroOrMore struct {
+// zeroOrMore
+type zeroOrMore struct {
 	ope Ope
 }
 
-func (o *ZeroOrMore) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("ZeroOrMore", s, sv, dt)
+func (o *zeroOrMore) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+	c.traceBegin("ZeroOrMore", s, sv, dt)
 	defer c.traceEnd("ZeroOrMore", s, sv, dt, &l)
 	saveErrorPos := c.errorPos
 	l = 0
 	for len(s)-l > 0 {
 		saveVs := sv.Vs
 		chldl := o.ope.parse(s[l:], sv, c, dt)
-		if Fail(chldl) {
+		if fail(chldl) {
 			if len(sv.Vs) != len(saveVs) {
 				sv.Vs = saveVs
 			}
@@ -182,27 +181,27 @@ func (o *ZeroOrMore) parse(s string, sv *SemanticValues, c *context, dt Any) (l 
 	return
 }
 
-func (o *ZeroOrMore) accept(v visitor) {
+func (o *zeroOrMore) accept(v visitor) {
 	v.visitZeroOrMore(o)
 }
 
-// OneOrMore
-type OneOrMore struct {
+// oneOrMore
+type oneOrMore struct {
 	ope Ope
 }
 
-func (o *OneOrMore) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("OneOrMore", s, sv, dt)
+func (o *oneOrMore) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+	c.traceBegin("OneOrMore", s, sv, dt)
 	defer c.traceEnd("OneOrMore", s, sv, dt, &l)
 	l = o.ope.parse(s, sv, c, dt)
-	if Fail(l) {
+	if fail(l) {
 		return
 	}
 	saveErrorPos := c.errorPos
 	for len(s)-l > 0 {
 		saveVs := sv.Vs
 		chldl := o.ope.parse(s[l:], sv, c, dt)
-		if Fail(chldl) {
+		if fail(chldl) {
 			if len(sv.Vs) != len(saveVs) {
 				sv.Vs = saveVs
 			}
@@ -214,22 +213,22 @@ func (o *OneOrMore) parse(s string, sv *SemanticValues, c *context, dt Any) (l i
 	return
 }
 
-func (o *OneOrMore) accept(v visitor) {
+func (o *oneOrMore) accept(v visitor) {
 	v.visitOneOrMore(o)
 }
 
-// Option
-type Option struct {
+// option
+type option struct {
 	ope Ope
 }
 
-func (o *Option) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("Option", s, sv, dt)
+func (o *option) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+	c.traceBegin("Option", s, sv, dt)
 	defer c.traceEnd("Option", s, sv, dt, &l)
 	saveErrorPos := c.errorPos
 	saveVs := sv.Vs
 	l = o.ope.parse(s, sv, c, dt)
-	if Fail(l) {
+	if fail(l) {
 		if len(sv.Vs) != len(saveVs) {
 			sv.Vs = saveVs
 		}
@@ -239,22 +238,22 @@ func (o *Option) parse(s string, sv *SemanticValues, c *context, dt Any) (l int)
 	return
 }
 
-func (o *Option) accept(v visitor) {
+func (o *option) accept(v visitor) {
 	v.visitOption(o)
 }
 
-// AndPredicate
-type AndPredicate struct {
+// andPredicate
+type andPredicate struct {
 	ope Ope
 }
 
-func (o *AndPredicate) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("AndPredicate", s, sv, dt)
+func (o *andPredicate) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+	c.traceBegin("AndPredicate", s, sv, dt)
 	defer c.traceEnd("AndPredicate", s, sv, dt, &l)
 	chldsv := c.stack.push()
 	defer c.stack.pop()
 	chldl := o.ope.parse(s, chldsv, c, dt)
-	if Success(chldl) {
+	if success(chldl) {
 		l = 0
 	} else {
 		l = -1
@@ -262,23 +261,23 @@ func (o *AndPredicate) parse(s string, sv *SemanticValues, c *context, dt Any) (
 	return
 }
 
-func (o *AndPredicate) accept(v visitor) {
+func (o *andPredicate) accept(v visitor) {
 	v.visitAndPredicate(o)
 }
 
-// NotPredicate
-type NotPredicate struct {
+// notPredicate
+type notPredicate struct {
 	ope Ope
 }
 
-func (o *NotPredicate) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("NotPredicate", s, sv, dt)
+func (o *notPredicate) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+	c.traceBegin("NotPredicate", s, sv, dt)
 	defer c.traceEnd("NotPredicate", s, sv, dt, &l)
 	saveErrorPos := c.errorPos
 	chldsv := c.stack.push()
 	defer c.stack.pop()
 	chldl := o.ope.parse(s, chldsv, c, dt)
-	if Success(chldl) {
+	if success(chldl) {
 		c.setErrorPos(s)
 		l = -1
 	} else {
@@ -288,7 +287,7 @@ func (o *NotPredicate) parse(s string, sv *SemanticValues, c *context, dt Any) (
 	return
 }
 
-func (o *NotPredicate) accept(v visitor) {
+func (o *notPredicate) accept(v visitor) {
 	v.visitNotPredicate(o)
 }
 
@@ -298,7 +297,7 @@ type LiteralString struct {
 }
 
 func (o *LiteralString) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("LiteralString", s, sv, dt)
+	c.traceBegin("LiteralString", s, sv, dt)
 	defer c.traceEnd("LiteralString", s, sv, dt, &l)
 	l = 0
 	for ; l < len(o.lit); l++ {
@@ -315,13 +314,13 @@ func (o *LiteralString) accept(v visitor) {
 	v.visitLiteralString(o)
 }
 
-// CharacterClass
-type CharacterClass struct {
+// characterClass
+type characterClass struct {
 	chars string
 }
 
-func (o *CharacterClass) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("CharacterClass", s, sv, dt)
+func (o *characterClass) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+	c.traceBegin("CharacterClass", s, sv, dt)
 	defer c.traceEnd("CharacterClass", s, sv, dt, &l)
 	// TODO: UTF8 support
 	if len(s) < 1 {
@@ -351,16 +350,16 @@ func (o *CharacterClass) parse(s string, sv *SemanticValues, c *context, dt Any)
 	return
 }
 
-func (o *CharacterClass) accept(v visitor) {
+func (o *characterClass) accept(v visitor) {
 	v.visitCharacterClass(o)
 }
 
-// AnyCharacter
-type AnyCharacter struct {
+// anyCharacter
+type anyCharacter struct {
 }
 
-func (o *AnyCharacter) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("AnyCharacter", s, sv, dt)
+func (o *anyCharacter) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+	c.traceBegin("AnyCharacter", s, sv, dt)
 	defer c.traceEnd("AnyCharacter", s, sv, dt, &l)
 	// TODO: UTF8 support
 	if len(s) < 1 {
@@ -372,20 +371,20 @@ func (o *AnyCharacter) parse(s string, sv *SemanticValues, c *context, dt Any) (
 	return
 }
 
-func (o *AnyCharacter) accept(v visitor) {
+func (o *anyCharacter) accept(v visitor) {
 	v.visitAnyCharacter(o)
 }
 
-// TokenBoundary
-type TokenBoundary struct {
+// tokenBoundary
+type tokenBoundary struct {
 	ope Ope
 }
 
-func (o *TokenBoundary) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("TokenBoundary", s, sv, dt)
+func (o *tokenBoundary) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+	c.traceBegin("TokenBoundary", s, sv, dt)
 	defer c.traceEnd("TokenBoundary", s, sv, dt, &l)
 	l = o.ope.parse(s, sv, c, dt)
-	if Success(l) {
+	if success(l) {
 		sv.Pos = len(c.s) - len(s)
 		sv.S = s[:l]
 		sv.isValidString = true
@@ -393,77 +392,76 @@ func (o *TokenBoundary) parse(s string, sv *SemanticValues, c *context, dt Any) 
 	return l
 }
 
-func (o *TokenBoundary) accept(v visitor) {
+func (o *tokenBoundary) accept(v visitor) {
 	v.visitTokenBoundary(o)
 }
 
-// Ignore
-type Ignore struct {
+// ignore
+type ignore struct {
 	ope Ope
 }
 
-func (o *Ignore) parse(s string, sv *SemanticValues, c *context, dt Any) int {
+func (o *ignore) parse(s string, sv *SemanticValues, c *context, dt Any) int {
 	chldsv := c.stack.push()
 	defer c.stack.pop()
 	return o.ope.parse(s, chldsv, c, dt)
 }
 
-func (o *Ignore) accept(v visitor) {
+func (o *ignore) accept(v visitor) {
 	v.visitIgnore(o)
 }
 
-// User
-type User struct {
+// user
+type user struct {
 	fn func(s string, sv *SemanticValues, dt Any) int
 }
 
-func (o *User) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	c.trace("User", s, sv, dt)
+func (o *user) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+	c.traceBegin("User", s, sv, dt)
 	defer c.traceEnd("User", s, sv, dt, &l)
 	l = o.fn(s, sv, dt)
 	return
 }
 
-func (o *User) accept(v visitor) {
+func (o *user) accept(v visitor) {
 	v.visitUser(o)
 }
 
-// Reference
-type Reference struct {
+// reference
+type reference struct {
 	grammar map[string]*Rule
 	name    string
 	pos     int
 }
 
-func (o *Reference) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *reference) parse(s string, sv *SemanticValues, c *context, dt Any) (l int) {
 	name := "[" + o.name + "]"
-	c.trace(name, s, sv, dt)
+	c.traceBegin(name, s, sv, dt)
 	defer c.traceEnd(name, s, sv, dt, &l)
 	rule := o.getRule()
 	l = rule.parse(s, sv, c, dt)
 	return
 }
 
-func (o *Reference) accept(v visitor) {
+func (o *reference) accept(v visitor) {
 	v.visitReference(o)
 }
 
-func (o *Reference) getRule() Ope {
+func (o *reference) getRule() Ope {
 	return o.grammar[o.name] // TODO: fixup
 }
 
-// Constructors
-func Seq(opes ...Ope) *Sequence                                   { return &Sequence{opes} }
-func Cho(opes ...Ope) *PrioritizedChoice                          { return &PrioritizedChoice{opes} }
-func Zom(ope Ope) *ZeroOrMore                                     { return &ZeroOrMore{ope} }
-func Oom(ope Ope) *OneOrMore                                      { return &OneOrMore{ope} }
-func Opt(ope Ope) *Option                                         { return &Option{ope} }
-func Apd(ope Ope) *AndPredicate                                   { return &AndPredicate{ope} }
-func Npd(ope Ope) *NotPredicate                                   { return &NotPredicate{ope} }
+func Seq(opes ...Ope) *sequence                                   { return &sequence{opes} }
+func Cho(opes ...Ope) *prioritizedChoice                          { return &prioritizedChoice{opes} }
+func Zom(ope Ope) *zeroOrMore                                     { return &zeroOrMore{ope} }
+func Oom(ope Ope) *oneOrMore                                      { return &oneOrMore{ope} }
+func Opt(ope Ope) *option                                         { return &option{ope} }
+func Apd(ope Ope) *andPredicate                                   { return &andPredicate{ope} }
+func Npd(ope Ope) *notPredicate                                   { return &notPredicate{ope} }
 func Lit(lit string) *LiteralString                               { return &LiteralString{lit} }
-func Cls(chars string) *CharacterClass                            { return &CharacterClass{chars} }
-func Dot() *AnyCharacter                                          { return &AnyCharacter{} }
-func Tok(ope Ope) *TokenBoundary                                  { return &TokenBoundary{ope} }
-func Ign(ope Ope) *Ignore                                         { return &Ignore{ope} }
-func Usr(fn func(s string, sv *SemanticValues, dt Any) int) *User { return &User{fn} }
-func Ref(g map[string]*Rule, ident string, pos int) *Reference    { return &Reference{g, ident, pos} }
+func Cls(chars string) *characterClass                            { return &characterClass{chars} }
+func Dot() *anyCharacter                                          { return &anyCharacter{} }
+func Tok(ope Ope) *tokenBoundary                                  { return &tokenBoundary{ope} }
+func Ign(ope Ope) *ignore                                         { return &ignore{ope} }
+func Usr(fn func(s string, sv *SemanticValues, dt Any) int) *user { return &user{fn} }
+func Ref(g map[string]*Rule, ident string, pos int) *reference    { return &reference{g, ident, pos} }

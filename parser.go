@@ -378,7 +378,7 @@ func NewParserWithUserRules(s string, rules map[string]Ope) (p *Parser, err *Err
 		for _, dup := range data.duplicates {
 			ln, col := lineInfo(s, dup.pos)
 			msg := "'" + dup.name + "' is already defined."
-			err.details = append(err.details, ErrorDetail{ln, col, msg})
+			err.Details = append(err.Details, ErrorDetail{ln, col, msg})
 		}
 	}
 
@@ -390,7 +390,7 @@ func NewParserWithUserRules(s string, rules map[string]Ope) (p *Parser, err *Err
 			}
 			ln, col := lineInfo(s, pos)
 			msg := "'" + name + "' is not defined."
-			err.details = append(err.details, ErrorDetail{ln, col, msg})
+			err.Details = append(err.Details, ErrorDetail{ln, col, msg})
 		}
 	}
 
@@ -413,7 +413,7 @@ func NewParserWithUserRules(s string, rules map[string]Ope) (p *Parser, err *Err
 			}
 			ln, col := lineInfo(s, lr.pos)
 			msg := "'" + name + "' is left recursive."
-			err.details = append(err.details, ErrorDetail{ln, col, msg})
+			err.Details = append(err.Details, ErrorDetail{ln, col, msg})
 		}
 	}
 

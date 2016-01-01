@@ -2,20 +2,20 @@ package peg
 
 // visitor
 type visitor interface {
-	visitSequence(ope *Sequence)
-	visitPrioritizedChoice(ope *PrioritizedChoice)
-	visitZeroOrMore(ope *ZeroOrMore)
-	visitOneOrMore(ope *OneOrMore)
-	visitOption(ope *Option)
-	visitAndPredicate(ope *AndPredicate)
-	visitNotPredicate(ope *NotPredicate)
+	visitSequence(ope *sequence)
+	visitPrioritizedChoice(ope *prioritizedChoice)
+	visitZeroOrMore(ope *zeroOrMore)
+	visitOneOrMore(ope *oneOrMore)
+	visitOption(ope *option)
+	visitAndPredicate(ope *andPredicate)
+	visitNotPredicate(ope *notPredicate)
 	visitLiteralString(ope *LiteralString)
-	visitCharacterClass(ope *CharacterClass)
-	visitAnyCharacter(ope *AnyCharacter)
-	visitTokenBoundary(ope *TokenBoundary)
-	visitIgnore(ope *Ignore)
-	visitUser(ope *User)
-	visitReference(ope *Reference)
+	visitCharacterClass(ope *characterClass)
+	visitAnyCharacter(ope *anyCharacter)
+	visitTokenBoundary(ope *tokenBoundary)
+	visitIgnore(ope *ignore)
+	visitUser(ope *user)
+	visitReference(ope *reference)
 	visitRule(ope *Rule)
 }
 
@@ -23,20 +23,20 @@ type visitor interface {
 type abstractVisitor struct {
 }
 
-func (v *abstractVisitor) visitSequence(ope *Sequence)                   {}
-func (v *abstractVisitor) visitPrioritizedChoice(ope *PrioritizedChoice) {}
-func (v *abstractVisitor) visitZeroOrMore(ope *ZeroOrMore)               {}
-func (v *abstractVisitor) visitOneOrMore(ope *OneOrMore)                 {}
-func (v *abstractVisitor) visitOption(ope *Option)                       {}
-func (v *abstractVisitor) visitAndPredicate(ope *AndPredicate)           {}
-func (v *abstractVisitor) visitNotPredicate(ope *NotPredicate)           {}
+func (v *abstractVisitor) visitSequence(ope *sequence)                   {}
+func (v *abstractVisitor) visitPrioritizedChoice(ope *prioritizedChoice) {}
+func (v *abstractVisitor) visitZeroOrMore(ope *zeroOrMore)               {}
+func (v *abstractVisitor) visitOneOrMore(ope *oneOrMore)                 {}
+func (v *abstractVisitor) visitOption(ope *option)                       {}
+func (v *abstractVisitor) visitAndPredicate(ope *andPredicate)           {}
+func (v *abstractVisitor) visitNotPredicate(ope *notPredicate)           {}
 func (v *abstractVisitor) visitLiteralString(ope *LiteralString)         {}
-func (v *abstractVisitor) visitCharacterClass(ope *CharacterClass)       {}
-func (v *abstractVisitor) visitAnyCharacter(ope *AnyCharacter)           {}
-func (v *abstractVisitor) visitTokenBoundary(ope *TokenBoundary)         {}
-func (v *abstractVisitor) visitIgnore(ope *Ignore)                       {}
-func (v *abstractVisitor) visitUser(ope *User)                           {}
-func (v *abstractVisitor) visitReference(ope *Reference)                 {}
+func (v *abstractVisitor) visitCharacterClass(ope *characterClass)       {}
+func (v *abstractVisitor) visitAnyCharacter(ope *anyCharacter)           {}
+func (v *abstractVisitor) visitTokenBoundary(ope *tokenBoundary)         {}
+func (v *abstractVisitor) visitIgnore(ope *ignore)                       {}
+func (v *abstractVisitor) visitUser(ope *user)                           {}
+func (v *abstractVisitor) visitReference(ope *reference)                 {}
 func (v *abstractVisitor) visitRule(ope *Rule)                           {}
 
 // tokenChecker
@@ -46,24 +46,24 @@ type tokenChecker struct {
 	hasRule          bool
 }
 
-func (v *tokenChecker) visitSequence(ope *Sequence) {
+func (v *tokenChecker) visitSequence(ope *sequence) {
 	for _, o := range ope.opes {
 		o.accept(v)
 	}
 }
 
-func (v *tokenChecker) visitPrioritizedChoice(ope *PrioritizedChoice) {
+func (v *tokenChecker) visitPrioritizedChoice(ope *prioritizedChoice) {
 	for _, o := range ope.opes {
 		o.accept(v)
 	}
 }
 
-func (v *tokenChecker) visitZeroOrMore(ope *ZeroOrMore)       { ope.ope.accept(v) }
-func (v *tokenChecker) visitOneOrMore(ope *OneOrMore)         { ope.ope.accept(v) }
-func (v *tokenChecker) visitOption(ope *Option)               { ope.ope.accept(v) }
-func (v *tokenChecker) visitTokenBoundary(ope *TokenBoundary) { v.hasTokenBoundary = true }
-func (v *tokenChecker) visitIgnore(ope *Ignore)               { ope.ope.accept(v) }
-func (v *tokenChecker) visitReference(ope *Reference)         { v.hasRule = true }
+func (v *tokenChecker) visitZeroOrMore(ope *zeroOrMore)       { ope.ope.accept(v) }
+func (v *tokenChecker) visitOneOrMore(ope *oneOrMore)         { ope.ope.accept(v) }
+func (v *tokenChecker) visitOption(ope *option)               { ope.ope.accept(v) }
+func (v *tokenChecker) visitTokenBoundary(ope *tokenBoundary) { v.hasTokenBoundary = true }
+func (v *tokenChecker) visitIgnore(ope *ignore)               { ope.ope.accept(v) }
+func (v *tokenChecker) visitReference(ope *reference)         { v.hasRule = true }
 func (v *tokenChecker) visitRule(ope *Rule)                   { v.hasRule = true }
 
 func (v *tokenChecker) isToken() bool {
@@ -79,7 +79,7 @@ type detectLeftRecursion struct {
 	done bool
 }
 
-func (v *detectLeftRecursion) visitSequence(ope *Sequence) {
+func (v *detectLeftRecursion) visitSequence(ope *sequence) {
 	for _, o := range ope.opes {
 		o.accept(v)
 		if v.done {
@@ -91,7 +91,7 @@ func (v *detectLeftRecursion) visitSequence(ope *Sequence) {
 	}
 }
 
-func (v *detectLeftRecursion) visitPrioritizedChoice(ope *PrioritizedChoice) {
+func (v *detectLeftRecursion) visitPrioritizedChoice(ope *prioritizedChoice) {
 	for _, o := range ope.opes {
 		o.accept(v)
 		if v.pos != -1 {
@@ -101,18 +101,18 @@ func (v *detectLeftRecursion) visitPrioritizedChoice(ope *PrioritizedChoice) {
 	}
 }
 
-func (v *detectLeftRecursion) visitZeroOrMore(ope *ZeroOrMore)         { ope.ope.accept(v); v.done = false }
-func (v *detectLeftRecursion) visitOneOrMore(ope *OneOrMore)           { ope.ope.accept(v); v.done = true }
-func (v *detectLeftRecursion) visitOption(ope *Option)                 { ope.ope.accept(v); v.done = false }
-func (v *detectLeftRecursion) visitAndPredicate(ope *AndPredicate)     { ope.ope.accept(v); v.done = false }
-func (v *detectLeftRecursion) visitNotPredicate(ope *NotPredicate)     { ope.ope.accept(v); v.done = false }
+func (v *detectLeftRecursion) visitZeroOrMore(ope *zeroOrMore)         { ope.ope.accept(v); v.done = false }
+func (v *detectLeftRecursion) visitOneOrMore(ope *oneOrMore)           { ope.ope.accept(v); v.done = true }
+func (v *detectLeftRecursion) visitOption(ope *option)                 { ope.ope.accept(v); v.done = false }
+func (v *detectLeftRecursion) visitAndPredicate(ope *andPredicate)     { ope.ope.accept(v); v.done = false }
+func (v *detectLeftRecursion) visitNotPredicate(ope *notPredicate)     { ope.ope.accept(v); v.done = false }
 func (v *detectLeftRecursion) visitLiteralString(ope *LiteralString)   { v.done = len(ope.lit) > 0 }
-func (v *detectLeftRecursion) visitCharacterClass(ope *CharacterClass) { v.done = true }
-func (v *detectLeftRecursion) visitAnyCharacter(ope *AnyCharacter)     { v.done = true }
-func (v *detectLeftRecursion) visitTokenBoundary(ope *TokenBoundary)   { ope.ope.accept(v) }
-func (v *detectLeftRecursion) visitIgnore(ope *Ignore)                 { ope.ope.accept(v) }
+func (v *detectLeftRecursion) visitCharacterClass(ope *characterClass) { v.done = true }
+func (v *detectLeftRecursion) visitAnyCharacter(ope *anyCharacter)     { v.done = true }
+func (v *detectLeftRecursion) visitTokenBoundary(ope *tokenBoundary)   { ope.ope.accept(v) }
+func (v *detectLeftRecursion) visitIgnore(ope *ignore)                 { ope.ope.accept(v) }
 
-func (v *detectLeftRecursion) visitReference(ope *Reference) {
+func (v *detectLeftRecursion) visitReference(ope *reference) {
 	if ope.name == v.name {
 		v.pos = ope.pos
 	} else if _, ok := v.refs[ope.name]; ok {

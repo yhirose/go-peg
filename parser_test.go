@@ -278,9 +278,9 @@ func TestEnterExitHandlers(t *testing.T) {
 	assert(t, parser.Parse("HELLO=WORLD", dt) == nil)
 
 	err := parser.Parse("hello=world", dt)
-	assert(t, err.details[0].ln == 1)
-	assert(t, err.details[0].col == 7)
-	assert(t, err.details[0].msg == msg)
+	assert(t, err.Details[0].Ln == 1)
+	assert(t, err.Details[0].Col == 7)
+	assert(t, err.Details[0].Msg == msg)
 }
 
 /*

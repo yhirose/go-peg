@@ -71,7 +71,7 @@ func TestStringCapture(t *testing.T) {
 		return
 	}
 
-	assert(t, parser.Parse(" [tag1] [tag:2] [tag-3] ") == nil)
+	assert(t, parser.Parse(" [tag1] [tag:2] [tag-3] ", nil) == nil)
 	assert(t, len(tags) == 3)
 	assert(t, tags[0] == "tag1")
 	assert(t, tags[1] == "tag:2")
@@ -134,7 +134,7 @@ func TestStringCapture3(t *testing.T) {
 		return
 	}
 
-	assert(t, parser.Parse(" [tag1] [tag:2] [tag-3] ") == nil)
+	assert(t, parser.Parse(" [tag1] [tag:2] [tag-3] ", nil) == nil)
 	assert(t, len(tags) == 3)
 	assert(t, tags[0] == "tag1")
 	assert(t, tags[1] == "tag:2")
@@ -240,7 +240,7 @@ func TestLambdaAction(t *testing.T) {
 		return
 	}
 
-	assert(t, parser.Parse("hello") == nil)
+	assert(t, parser.Parse("hello", nil) == nil)
 	assert(t, ss == "hello")
 }
 
@@ -272,12 +272,12 @@ func TestEnterExitHandlers(t *testing.T) {
 
 	requireUpperCase := false
 	var dt Any = &requireUpperCase
-	assert(t, parser.ParseWithData("hello=world", dt) != nil)
-	assert(t, parser.ParseWithData("HELLO=world", dt) != nil)
-	assert(t, parser.ParseWithData("hello=WORLD", dt) == nil)
-	assert(t, parser.ParseWithData("HELLO=WORLD", dt) == nil)
+	assert(t, parser.Parse("hello=world", dt) != nil)
+	assert(t, parser.Parse("HELLO=world", dt) != nil)
+	assert(t, parser.Parse("hello=WORLD", dt) == nil)
+	assert(t, parser.Parse("HELLO=WORLD", dt) == nil)
 
-	err := parser.ParseWithData("hello=world", dt)
+	err := parser.Parse("hello=world", dt)
 	assert(t, err.details[0].ln == 1)
 	assert(t, err.details[0].col == 7)
 	assert(t, err.details[0].msg == msg)
@@ -342,7 +342,7 @@ func TestSkipToken(t *testing.T) {
 		return
 	}
 
-	assert(t, parser.Parse(" item1, item2 ") == nil)
+	assert(t, parser.Parse(" item1, item2 ", nil) == nil)
 }
 
 /*
@@ -405,7 +405,7 @@ func TestOctalHexValue(t *testing.T) {
         ROOT <- '\132\x7a'
     `)
 
-	assert(t, parser.Parse("Zz") == nil)
+	assert(t, parser.Parse("Zz", nil) == nil)
 }
 
 func TestSimpleCalculator(t *testing.T) {
@@ -440,7 +440,7 @@ func TestSimpleCalculator(t *testing.T) {
 		return strconv.Atoi(sv.S)
 	}
 
-	val, err := parser.ParseAndGetValue("(1+2)*3")
+	val, err := parser.ParseAndGetValue("(1+2)*3", nil)
 
 	assert(t, err == nil)
 	assert(t, val == 9)
@@ -541,7 +541,7 @@ func TestCalculator2(t *testing.T) {
 	}
 
 	// Parse
-	val, err := parser.ParseAndGetValue("1+2*3*(4-5+6)/7-8")
+	val, err := parser.ParseAndGetValue("1+2*3*(4-5+6)/7-8", nil)
 
 	assert(t, err == nil)
 	assert(t, val == -3)
@@ -777,7 +777,7 @@ func TestLeftUserRule(t *testing.T) {
 
 	parser, err := NewParserWithUserRules(syntax, rules)
 	assert(t, err == nil)
-	assert(t, parser.Parse(" Hello BNF! ") == nil)
+	assert(t, parser.Parse(" Hello BNF! ", nil) == nil)
 }
 
 func TestSemanticPredicate(t *testing.T) {
@@ -791,11 +791,11 @@ func TestSemanticPredicate(t *testing.T) {
 		return
 	}
 
-	val, err := parser.ParseAndGetValue("100")
+	val, err := parser.ParseAndGetValue("100", nil)
 	assert(t, err == nil)
 	assert(t, val == 100)
 
-	val, err = parser.ParseAndGetValue("200")
+	val, err = parser.ParseAndGetValue("200", nil)
 	assert(t, err != nil)
 }
 
@@ -811,7 +811,7 @@ func TestJapaneseCharacter(t *testing.T) {
         助詞 <- 'が' / 'を' / 'た' / 'ます' / 'に'
 	`)
 
-	assert(t, parser.Parse("サーバーを復旧します。") == nil)
+	assert(t, parser.Parse("サーバーを復旧します。", nil) == nil)
 }
 
 func match(t *testing.T, r *Rule, s string, want bool) {

@@ -425,20 +425,12 @@ func NewParserWithUserRules(s string, rules map[string]Ope) (p *Parser, err *Err
 	return
 }
 
-func (p *Parser) Parse(s string) *Error {
-	return p.ParseWithData(s, nil)
-}
-
-func (p *Parser) ParseWithData(s string, dt Any) (err *Error) {
-	_, err = p.ParseWithDataAndGetValue(s, dt)
+func (p *Parser) Parse(s string, dt Any) (err *Error) {
+	_, err = p.ParseAndGetValue(s, dt)
 	return
 }
 
-func (p *Parser) ParseAndGetValue(s string) (Any, *Error) {
-	return p.ParseWithDataAndGetValue(s, nil)
-}
-
-func (p *Parser) ParseWithDataAndGetValue(s string, dt Any) (v Any, err *Error) {
+func (p *Parser) ParseAndGetValue(s string, dt Any) (v Any, err *Error) {
 	r := p.Grammar[p.start]
 	r.TracerBegin = p.TracerBegin
 	r.TracerEnd = p.TracerEnd

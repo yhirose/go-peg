@@ -55,7 +55,8 @@ func main() {
 	g["NUMBER"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return strconv.Atoi(sv.S) }
 
 	// Parse
-	if val, err := parser.ParseAndGetValue(" 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "); err == nil {
+	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
+	if val, err := parser.ParseAndGetValue(input, nil); err == nil {
 		fmt.Println(val) // -3
 	} else {
 		fmt.Println(err)

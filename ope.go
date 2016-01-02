@@ -30,6 +30,10 @@ type SemanticValues struct {
 	isValidString bool
 }
 
+func (sv *SemanticValues) Len() int {
+	return len(sv.Vs)
+}
+
 func (sv *SemanticValues) ToStr(i int) string {
 	return sv.Vs[i].V.(string)
 }

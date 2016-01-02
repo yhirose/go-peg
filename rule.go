@@ -79,18 +79,15 @@ func (r *Rule) Parse(s string, dt Any) (l int, v Any, err *Error) {
 }
 
 func (r *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
-	var v Any
-	tok := s[:]
-
-	// TODO: Packrat parser support
-	c.ruleStack.push(r)
-	chldsv := c.svStack.push()
 	if r.Enter != nil {
 		r.Enter(dt)
 	}
 
-	ope := r.Ope
+	c.ruleStack.push(r)
+	chldsv := c.svStack.push()
 
+	// Setup whitespace operator if necessary
+	ope := r.Ope
 	if !c.inToken && c.whitespaceOpe != nil {
 		if c.ruleStack.size() == 1 {
 			if r.isToken() && !r.hasTokenBoundary() {
@@ -107,7 +104,7 @@ func (r *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
 		}
 	}
 
-	//l := r.Ope.parse(s, chldsv, c, dt)
+	// Parse
 	var l int
 	if !c.inToken && r.isToken() {
 		c.inToken = true
@@ -118,6 +115,9 @@ func (r *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
 	}
 
 	// Invoke action
+	var v Any
+	tok := s[:]
+
 	if success(l) {
 		if chldsv.isValidString {
 			tok = chldsv.S
@@ -155,8 +155,9 @@ func (r *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
 		}
 	}
 
-	c.ruleStack.pop()
 	c.svStack.pop()
+	c.ruleStack.pop()
+
 	if r.Exit != nil {
 		r.Exit(dt)
 	}

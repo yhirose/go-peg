@@ -1,9 +1,7 @@
 go-peg
 ======
 
-Go language [PEG](http://en.wikipedia.org/wiki/Parsing_expression_grammar) (Parsing Expression Grammars) library.
-
-This library is ported from [cpp-pegib](https://github.com/yhirose/cpp-peglib).
+Yet another [PEG](http://en.wikipedia.org/wiki/Parsing_expression_grammar) (Parsing Expression Grammars) parser generator for Go.
 
 ```go
 package main
@@ -18,13 +16,13 @@ func main() {
 	// Create a PEG parser
 	parser, _ := NewParser(`
         # Grammar for simple calculator...
-        EXPRESSION       <-  _ TERM (TERM_OPERATOR TERM)*
+        EXPRESSION       <-  TERM (TERM_OPERATOR TERM)*
         TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
-        FACTOR           <-  NUMBER / '(' _ EXPRESSION ')' _
-        TERM_OPERATOR    <-  < [-+] > _
-        FACTOR_OPERATOR  <-  < [/*] > _
-        NUMBER           <-  < [0-9]+ > _
-		~_               <-  [ \t]*
+        FACTOR           <-  NUMBER / '(' EXPRESSION ')'
+        TERM_OPERATOR    <-  [-+]
+        FACTOR_OPERATOR  <-  [/*]
+        NUMBER           <-  [0-9]+
+		%whitespace      <-  [ \t]*
     `)
 
 	// Setup actions
@@ -58,8 +56,6 @@ func main() {
 	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
 	if val, err := parser.ParseAndGetValue(input, nil); err == nil {
 		fmt.Println(val) // -3
-	} else {
-		fmt.Println(err)
 	}
 }
 ```

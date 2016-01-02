@@ -161,8 +161,8 @@ func (o *prioritizedChoice) parse(s string, sv *SemanticValues, c *context, dt A
 	id := 0
 	for _, ope := range o.opes {
 		chldsv := c.svStack.push()
-		defer c.svStack.pop()
 		l = ope.parse(s, chldsv, c, dt)
+		c.svStack.pop()
 		if success(l) {
 			if len(chldsv.Vs) > 0 {
 				sv.Vs = append(sv.Vs, chldsv.Vs...)
@@ -282,8 +282,9 @@ func (o *andPredicate) parse(s string, sv *SemanticValues, c *context, dt Any) (
 	defer c.traceEnd("AndPredicate", s, sv, dt, &l)
 
 	chldsv := c.svStack.push()
-	defer c.svStack.pop()
 	chldl := o.ope.parse(s, chldsv, c, dt)
+	c.svStack.pop()
+
 	if success(chldl) {
 		l = 0
 	} else {
@@ -306,9 +307,11 @@ func (o *notPredicate) parse(s string, sv *SemanticValues, c *context, dt Any) (
 	defer c.traceEnd("NotPredicate", s, sv, dt, &l)
 
 	saveErrorPos := c.errorPos
+
 	chldsv := c.svStack.push()
-	defer c.svStack.pop()
 	chldl := o.ope.parse(s, chldsv, c, dt)
+	defer c.svStack.pop()
+
 	if success(chldl) {
 		c.setErrorPos(s)
 		l = -1
@@ -512,8 +515,9 @@ func (o *whitespace) parse(s string, sv *SemanticValues, c *context, dt Any) (l 
 		return 0
 	}
 	c.inWhitespace = true
-	defer func() { c.inWhitespace = false }()
-	return o.ope.parse(s, sv, c, dt)
+	l = o.ope.parse(s, sv, c, dt)
+	c.inWhitespace = false
+	return
 }
 
 func (o *whitespace) accept(v visitor) {

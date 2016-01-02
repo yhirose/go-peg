@@ -84,19 +84,10 @@ func (r *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
 
 	// TODO: Packrat parser support
 	c.ruleStack.push(r)
-	defer c.ruleStack.pop()
-
 	chldsv := c.svStack.push()
-	defer c.svStack.pop()
-
 	if r.Enter != nil {
 		r.Enter(dt)
 	}
-	defer func() {
-		if r.Exit != nil {
-			r.Exit(dt)
-		}
-	}()
 
 	ope := r.Ope
 
@@ -120,8 +111,8 @@ func (r *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
 	var l int
 	if !c.inToken && r.isToken() {
 		c.inToken = true
-		defer func() { c.inToken = false }()
 		l = ope.parse(s, chldsv, c, dt)
+		c.inToken = false
 	} else {
 		l = ope.parse(s, chldsv, c, dt)
 	}
@@ -162,6 +153,12 @@ func (r *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
 				c.message = r.Message()
 			}
 		}
+	}
+
+	c.ruleStack.pop()
+	c.svStack.pop()
+	if r.Exit != nil {
+		r.Exit(dt)
 	}
 
 	return l

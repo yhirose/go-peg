@@ -1,5 +1,10 @@
 package peg
 
+import (
+	"fmt"
+	"reflect"
+)
+
 // ErrorDetail
 type ErrorDetail struct {
 	Ln  int
@@ -17,10 +22,10 @@ func (e *Error) Error() string {
 }
 
 // TracerBegin
-type TracerBegin func(name string, s string, sv *SemanticValues, c *context, dt Any, p int)
+type TracerBegin func(o Ope, s string, sv *SemanticValues, c *context, dt Any, p int)
 
 // TracerEnd
-type TracerEnd func(name string, s string, sv *SemanticValues, c *context, dt Any, l int)
+type TracerEnd func(o Ope, s string, sv *SemanticValues, c *context, dt Any, l int)
 
 // Rule
 type Rule struct {
@@ -78,7 +83,15 @@ func (r *Rule) Parse(s string, dt Any) (l int, v Any, err *Error) {
 	return
 }
 
-func (r *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
+func (o *Rule) Label() string {
+	return fmt.Sprintf("%v[%s]", reflect.TypeOf(o), o.Name)
+}
+
+func (o *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
+	return parse(o, s, sv, c, dt)
+}
+
+func (r *Rule) parseCore(s string, sv *SemanticValues, c *context, dt Any) int {
 	if r.Enter != nil {
 		r.Enter(dt)
 	}

@@ -20,30 +20,30 @@ type visitor interface {
 	visitWhitespace(ope *whitespace)
 }
 
-// abstractVisitor
-type abstractVisitor struct {
+// visitorBase
+type visitorBase struct {
 }
 
-func (v *abstractVisitor) visitSequence(ope *sequence)                   {}
-func (v *abstractVisitor) visitPrioritizedChoice(ope *prioritizedChoice) {}
-func (v *abstractVisitor) visitZeroOrMore(ope *zeroOrMore)               {}
-func (v *abstractVisitor) visitOneOrMore(ope *oneOrMore)                 {}
-func (v *abstractVisitor) visitOption(ope *option)                       {}
-func (v *abstractVisitor) visitAndPredicate(ope *andPredicate)           {}
-func (v *abstractVisitor) visitNotPredicate(ope *notPredicate)           {}
-func (v *abstractVisitor) visitLiteralString(ope *literalString)         {}
-func (v *abstractVisitor) visitCharacterClass(ope *characterClass)       {}
-func (v *abstractVisitor) visitAnyCharacter(ope *anyCharacter)           {}
-func (v *abstractVisitor) visitTokenBoundary(ope *tokenBoundary)         {}
-func (v *abstractVisitor) visitIgnore(ope *ignore)                       {}
-func (v *abstractVisitor) visitUser(ope *user)                           {}
-func (v *abstractVisitor) visitReference(ope *reference)                 {}
-func (v *abstractVisitor) visitRule(ope *Rule)                           {}
-func (v *abstractVisitor) visitWhitespace(ope *whitespace)               {}
+func (v *visitorBase) visitSequence(ope *sequence)                   {}
+func (v *visitorBase) visitPrioritizedChoice(ope *prioritizedChoice) {}
+func (v *visitorBase) visitZeroOrMore(ope *zeroOrMore)               {}
+func (v *visitorBase) visitOneOrMore(ope *oneOrMore)                 {}
+func (v *visitorBase) visitOption(ope *option)                       {}
+func (v *visitorBase) visitAndPredicate(ope *andPredicate)           {}
+func (v *visitorBase) visitNotPredicate(ope *notPredicate)           {}
+func (v *visitorBase) visitLiteralString(ope *literalString)         {}
+func (v *visitorBase) visitCharacterClass(ope *characterClass)       {}
+func (v *visitorBase) visitAnyCharacter(ope *anyCharacter)           {}
+func (v *visitorBase) visitTokenBoundary(ope *tokenBoundary)         {}
+func (v *visitorBase) visitIgnore(ope *ignore)                       {}
+func (v *visitorBase) visitUser(ope *user)                           {}
+func (v *visitorBase) visitReference(ope *reference)                 {}
+func (v *visitorBase) visitRule(ope *Rule)                           {}
+func (v *visitorBase) visitWhitespace(ope *whitespace)               {}
 
 // tokenChecker
 type tokenChecker struct {
-	*abstractVisitor
+	*visitorBase
 	hasTokenBoundary bool
 	hasRule          bool
 }
@@ -74,7 +74,7 @@ func (v *tokenChecker) isToken() bool {
 
 // detectLeftRecursion
 type detectLeftRecursion struct {
-	*abstractVisitor
+	*visitorBase
 	pos  int
 	name string
 	refs map[string]bool

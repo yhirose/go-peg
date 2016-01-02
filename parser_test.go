@@ -2,29 +2,10 @@ package peg
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"testing"
 )
-
-func SetTracer(p *Parser) {
-	level := 0
-	prevPos := 0
-	p.TracerBegin = func(name string, s string, sv *SemanticValues, c *context, dt Any, p int) {
-		var backtrack string
-		if p < prevPos {
-			backtrack = "*"
-		}
-		fmt.Printf("%s(pos:%d%s\t%s\t\n", indent(level), p, backtrack, name)
-		prevPos = p
-		level++
-	}
-	p.TracerEnd = func(name string, s string, sv *SemanticValues, c *context, dt Any, l int) {
-		level--
-		fmt.Printf("%s)len:%d\t%s\t\n", indent(level), l, name)
-	}
-}
 
 func TestSimpleSyntax(t *testing.T) {
 	_, err := NewParser(`

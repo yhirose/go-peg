@@ -29,18 +29,18 @@ type TracerEnd func(o Ope, s string, sv *SemanticValues, c *context, dt Any, l i
 
 // Rule
 type Rule struct {
-	Name        string
-	Ope         Ope
-	Action      func(sv *SemanticValues, dt Any) (Any, error)
-	Enter       func(dt Any)
-	Exit        func(dt Any)
-	Message     func() (message string)
-	Ignore      bool
-	TracerBegin TracerBegin
-	TracerEnd   TracerEnd
+	Name          string
+	Ope           Ope
+	Action        func(sv *SemanticValues, dt Any) (Any, error)
+	Enter         func(dt Any)
+	Exit          func(dt Any)
+	Message       func() (message string)
+	Ignore        bool
+	WhitespaceOpe Ope
+	TracerBegin   TracerBegin
+	TracerEnd     TracerEnd
 
-	tokenChecker  *tokenChecker
-	whitespaceOpe Ope
+	tokenChecker *tokenChecker
 }
 
 func (r *Rule) Parse(s string, dt Any) (l int, v Any, err *Error) {
@@ -49,7 +49,7 @@ func (r *Rule) Parse(s string, dt Any) (l int, v Any, err *Error) {
 		s:             s,
 		errorPos:      -1,
 		messagePos:    -1,
-		whitespaceOpe: r.whitespaceOpe,
+		whitespaceOpe: r.WhitespaceOpe,
 		tracerBegin:   r.TracerBegin,
 		tracerEnd:     r.TracerEnd,
 	}

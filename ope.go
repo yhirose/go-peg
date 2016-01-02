@@ -315,7 +315,7 @@ func (o *notPredicate) parseCore(s string, sv *SemanticValues, c *context, dt An
 
 	chldsv := c.svStack.push()
 	chldl := o.ope.parse(s, chldsv, c, dt)
-	defer c.svStack.pop()
+	c.svStack.pop()
 
 	if success(chldl) {
 		c.setErrorPos(s)
@@ -453,8 +453,9 @@ type ignore struct {
 
 func (o *ignore) parseCore(s string, sv *SemanticValues, c *context, dt Any) int {
 	chldsv := c.svStack.push()
-	defer c.svStack.pop()
-	return o.ope.parse(s, chldsv, c, dt)
+	l := o.ope.parse(s, chldsv, c, dt)
+	c.svStack.pop()
+	return l
 }
 
 func (o *ignore) accept(v visitor) {

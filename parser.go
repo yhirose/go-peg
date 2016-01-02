@@ -451,6 +451,15 @@ func (p *Parser) ParseAndGetValue(s string, dt Any) (v Any, err *Error) {
 
 // Trace
 func Trace(p *Parser) {
+	indent := func(level int) string {
+		s := ""
+		for level > 0 {
+			s = s + "  "
+			level--
+		}
+		return s
+	}
+
 	level := 0
 	prevPos := 0
 	p.TracerBegin = func(o Ope, s string, sv *SemanticValues, c *context, dt Any, p int) {

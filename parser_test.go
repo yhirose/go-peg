@@ -30,15 +30,6 @@ func assert(t *testing.T, ok bool) {
 	}
 }
 
-func indent(level int) string {
-	s := ""
-	for level > 0 {
-		s = s + "  "
-		level--
-	}
-	return s
-}
-
 func TestStringCapture(t *testing.T) {
 	parser, _ := NewParser(`
 		ROOT      <-  _ ('[' TAG_NAME ']' _)*

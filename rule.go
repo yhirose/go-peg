@@ -24,16 +24,16 @@ func (e *Error) Error() string {
 }
 
 // Tracer enter
-type TracerEnter func(name string, s string, sv *Values, d Any, p int)
+type TracerEnter func(name string, s string, v *Values, d Any, p int)
 
 // Tracer leave
-type TracerLeave func(name string, s string, sv *Values, d Any, l int)
+type TracerLeave func(name string, s string, v *Values, d Any, l int)
 
 // Rule
 type Rule struct {
 	Name          string
 	Ope           operator
-	Action        func(sv *Values, d Any) (Any, error)
+	Action        func(v *Values, d Any) (Any, error)
 	Enter         func(d Any)
 	Leave         func(d Any)
 	Message       func() (message string)
@@ -45,8 +45,8 @@ type Rule struct {
 	tokenChecker *tokenChecker
 }
 
-func (r *Rule) Parse(s string, d Any) (l int, v Any, err *Error) {
-	sv := &Values{}
+func (r *Rule) Parse(s string, d Any) (l int, val Any, err *Error) {
+	v := &Values{}
 	c := &context{
 		s:             s,
 		errorPos:      -1,
@@ -56,10 +56,10 @@ func (r *Rule) Parse(s string, d Any) (l int, v Any, err *Error) {
 		tracerLeave:   r.TracerLeave,
 	}
 
-	l = r.parse(s, sv, c, d)
+	l = r.parse(s, v, c, d)
 
-	if success(l) && len(sv.Vs) > 0 && sv.Vs[0].V != nil {
-		v = sv.Vs[0].V
+	if success(l) && len(v.Vs) > 0 && v.Vs[0].V != nil {
+		val = v.Vs[0].V
 	}
 
 	if fail(l) || l != len(s) {
@@ -89,17 +89,17 @@ func (o *Rule) Label() string {
 	return fmt.Sprintf("[%s]", o.Name)
 }
 
-func (o *Rule) parse(s string, sv *Values, c *context, d Any) int {
-	return parse(o, s, sv, c, d)
+func (o *Rule) parse(s string, v *Values, c *context, d Any) int {
+	return parse(o, s, v, c, d)
 }
 
-func (r *Rule) parseCore(s string, sv *Values, c *context, d Any) int {
+func (r *Rule) parseCore(s string, v *Values, c *context, d Any) int {
 	if r.Enter != nil {
 		r.Enter(d)
 	}
 
 	c.ruleStack.push(r)
-	chldsv := c.svStack.push()
+	chv := c.svStack.push()
 
 	// Setup whitespace operator if necessary
 	ope := r.Ope
@@ -123,28 +123,28 @@ func (r *Rule) parseCore(s string, sv *Values, c *context, d Any) int {
 	var l int
 	if !c.inToken && r.isToken() {
 		c.inToken = true
-		l = ope.parse(s, chldsv, c, d)
+		l = ope.parse(s, chv, c, d)
 		c.inToken = false
 	} else {
-		l = ope.parse(s, chldsv, c, d)
+		l = ope.parse(s, chv, c, d)
 	}
 
 	// Invoke action
-	var v Any
+	var val Any
 	tok := s[:]
 
 	if success(l) {
-		if chldsv.isValidString {
-			tok = chldsv.S
+		if chv.isValidString {
+			tok = chv.S
 		} else {
 			tok = s[:l]
-			chldsv.S = s[:l]
-			chldsv.Pos = len(c.s) - len(s)
+			chv.S = s[:l]
+			chv.Pos = len(c.s) - len(s)
 		}
 
 		if r.Action != nil {
 			var err error
-			if v, err = r.Action(chldsv, d); err != nil {
+			if val, err = r.Action(chv, d); err != nil {
 				pos := len(c.s) - len(s)
 				if c.messagePos < pos {
 					c.messagePos = pos
@@ -152,14 +152,14 @@ func (r *Rule) parseCore(s string, sv *Values, c *context, d Any) int {
 				}
 				l = -1
 			}
-		} else if len(chldsv.Vs) > 0 {
-			v = chldsv.Vs[0].V
+		} else if len(chv.Vs) > 0 {
+			val = chv.Vs[0].V
 		}
 	}
 
 	if success(l) {
 		if r.Ignore == false {
-			sv.Vs = append(sv.Vs, Value{v, tok})
+			v.Vs = append(v.Vs, Value{val, tok})
 		}
 	} else {
 		if r.Message != nil {

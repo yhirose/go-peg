@@ -83,22 +83,22 @@ func init() {
 	rIGNORE.Ope = Lit("~")
 
 	// Setup actions
-	rDefinition.Action = func(sv *Values, d Any) (v Any, err error) {
+	rDefinition.Action = func(v *Values, d Any) (val Any, err error) {
 		data := d.(*data)
 
-		ignore := len(sv.Vs) == 4
+		ignore := len(v.Vs) == 4
 
 		baseId := 0
 		if ignore {
 			baseId = 1
 		}
 
-		name := sv.ToStr(baseId)
-		ope := sv.ToOpe(baseId + 2)
+		name := v.ToStr(baseId)
+		ope := v.ToOpe(baseId + 2)
 
 		_, ok := data.grammar[name]
 		if ok {
-			data.duplicates = append(data.duplicates, duplicate{name, sv.Pos})
+			data.duplicates = append(data.duplicates, duplicate{name, v.Pos})
 		} else {
 			data.grammar[name] = &Rule{
 				Ope:    ope,
@@ -112,127 +112,127 @@ func init() {
 		return
 	}
 
-	rExpression.Action = func(sv *Values, d Any) (v Any, err error) {
-		if len(sv.Vs) == 1 {
-			v = sv.ToOpe(0)
+	rExpression.Action = func(v *Values, d Any) (val Any, err error) {
+		if len(v.Vs) == 1 {
+			val = v.ToOpe(0)
 		} else {
 			var opes []operator
-			for i := 0; i < len(sv.Vs); i++ {
-				opes = append(opes, sv.ToOpe(i))
+			for i := 0; i < len(v.Vs); i++ {
+				opes = append(opes, v.ToOpe(i))
 			}
-			v = Cho(opes...)
+			val = Cho(opes...)
 		}
 		return
 	}
 
-	rSequence.Action = func(sv *Values, d Any) (v Any, err error) {
-		if len(sv.Vs) == 1 {
-			v = sv.ToOpe(0)
+	rSequence.Action = func(v *Values, d Any) (val Any, err error) {
+		if len(v.Vs) == 1 {
+			val = v.ToOpe(0)
 		} else {
 			var opes []operator
-			for i := 0; i < len(sv.Vs); i++ {
-				opes = append(opes, sv.ToOpe(i))
+			for i := 0; i < len(v.Vs); i++ {
+				opes = append(opes, v.ToOpe(i))
 			}
-			v = Seq(opes...)
+			val = Seq(opes...)
 		}
 		return
 	}
 
-	rPrefix.Action = func(sv *Values, d Any) (v Any, err error) {
-		if len(sv.Vs) == 1 {
-			v = sv.ToOpe(0)
+	rPrefix.Action = func(v *Values, d Any) (val Any, err error) {
+		if len(v.Vs) == 1 {
+			val = v.ToOpe(0)
 		} else {
-			tok := sv.ToStr(0)
-			ope := sv.ToOpe(1)
+			tok := v.ToStr(0)
+			ope := v.ToOpe(1)
 			switch tok {
 			case "&":
-				v = Apd(ope)
+				val = Apd(ope)
 			case "!":
-				v = Npd(ope)
+				val = Npd(ope)
 			}
 		}
 		return
 	}
 
-	rSuffix.Action = func(sv *Values, d Any) (v Any, err error) {
-		ope := sv.ToOpe(0)
-		if len(sv.Vs) == 1 {
-			v = ope
+	rSuffix.Action = func(v *Values, d Any) (val Any, err error) {
+		ope := v.ToOpe(0)
+		if len(v.Vs) == 1 {
+			val = ope
 		} else {
-			tok := sv.ToStr(1)
+			tok := v.ToStr(1)
 			switch tok {
 			case "?":
-				v = Opt(ope)
+				val = Opt(ope)
 			case "*":
-				v = Zom(ope)
+				val = Zom(ope)
 			case "+":
-				v = Oom(ope)
+				val = Oom(ope)
 			}
 		}
 		return
 	}
 
-	rPrimary.Action = func(sv *Values, d Any) (v Any, err error) {
+	rPrimary.Action = func(v *Values, d Any) (val Any, err error) {
 		data := d.(*data)
 
-		switch sv.Choice {
+		switch v.Choice {
 		case 0: // Reference
-			ignore := len(sv.Vs) == 2
+			ignore := len(v.Vs) == 2
 			baseId := 0
 			if ignore {
 				baseId = 1
 			}
 
-			ident := sv.ToStr(baseId)
+			ident := v.ToStr(baseId)
 
 			if _, ok := data.references[ident]; !ok {
-				data.references[ident] = sv.Pos // for error handling
+				data.references[ident] = v.Pos // for error handling
 			}
 
 			if ignore {
-				v = Ign(Ref(data.grammar, ident, sv.Pos))
+				val = Ign(Ref(data.grammar, ident, v.Pos))
 			} else {
-				v = Ref(data.grammar, ident, sv.Pos)
+				val = Ref(data.grammar, ident, v.Pos)
 			}
 		case 1: // (Expression)
-			v = sv.ToOpe(1)
+			val = v.ToOpe(1)
 		case 2: // TokenBoundary
-			v = Tok(sv.ToOpe(1))
+			val = Tok(v.ToOpe(1))
 		default:
-			v = sv.ToOpe(0)
+			val = v.ToOpe(0)
 		}
 		return
 	}
 
-	rIdentCont.Action = func(sv *Values, d Any) (Any, error) {
-		return sv.S, nil
+	rIdentCont.Action = func(v *Values, d Any) (Any, error) {
+		return v.S, nil
 	}
 
-	rLiteral.Action = func(sv *Values, d Any) (Any, error) {
-		return Lit(resolveEscapeSequence(sv.S)), nil
+	rLiteral.Action = func(v *Values, d Any) (Any, error) {
+		return Lit(resolveEscapeSequence(v.S)), nil
 	}
 
-	rClass.Action = func(sv *Values, d Any) (Any, error) {
-		return Cls(resolveEscapeSequence(sv.S)), nil
+	rClass.Action = func(v *Values, d Any) (Any, error) {
+		return Cls(resolveEscapeSequence(v.S)), nil
 	}
 
-	rAND.Action = func(sv *Values, d Any) (Any, error) {
-		return sv.S[:1], nil
+	rAND.Action = func(v *Values, d Any) (Any, error) {
+		return v.S[:1], nil
 	}
-	rNOT.Action = func(sv *Values, d Any) (Any, error) {
-		return sv.S[:1], nil
+	rNOT.Action = func(v *Values, d Any) (Any, error) {
+		return v.S[:1], nil
 	}
-	rQUESTION.Action = func(sv *Values, d Any) (Any, error) {
-		return sv.S[:1], nil
+	rQUESTION.Action = func(v *Values, d Any) (Any, error) {
+		return v.S[:1], nil
 	}
-	rSTAR.Action = func(sv *Values, d Any) (Any, error) {
-		return sv.S[:1], nil
+	rSTAR.Action = func(v *Values, d Any) (Any, error) {
+		return v.S[:1], nil
 	}
-	rPLUS.Action = func(sv *Values, d Any) (Any, error) {
-		return sv.S[:1], nil
+	rPLUS.Action = func(v *Values, d Any) (Any, error) {
+		return v.S[:1], nil
 	}
 
-	rDOT.Action = func(sv *Values, d Any) (Any, error) {
+	rDOT.Action = func(v *Values, d Any) (Any, error) {
 		return Dot(), nil
 	}
 }
@@ -439,10 +439,10 @@ func (p *Parser) Parse(s string, d Any) (err *Error) {
 	return
 }
 
-func (p *Parser) ParseAndGetValue(s string, d Any) (v Any, err *Error) {
+func (p *Parser) ParseAndGetValue(s string, d Any) (val Any, err *Error) {
 	r := p.Grammar[p.start]
 	r.TracerEnter = p.TracerEnter
 	r.TracerLeave = p.TracerLeave
-	_, v, err = r.Parse(s, d)
+	_, val, err = r.Parse(s, d)
 	return
 }

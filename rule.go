@@ -22,21 +22,21 @@ func (e *Error) Error() string {
 }
 
 // TracerBegin
-type TracerBegin func(o Ope, s string, sv *SemanticValues, c *context, dt Any, p int)
+type TracerBegin func(o operator, s string, sv *SemanticValues, c *context, dt Any, p int)
 
 // TracerEnd
-type TracerEnd func(o Ope, s string, sv *SemanticValues, c *context, dt Any, l int)
+type TracerEnd func(o operator, s string, sv *SemanticValues, c *context, dt Any, l int)
 
 // Rule
 type Rule struct {
 	Name          string
-	Ope           Ope
+	Ope           operator
 	Action        func(sv *SemanticValues, dt Any) (Any, error)
 	Enter         func(dt Any)
 	Exit          func(dt Any)
 	Message       func() (message string)
 	Ignore        bool
-	WhitespaceOpe Ope
+	WhitespaceOpe operator
 	TracerBegin   TracerBegin
 	TracerEnd     TracerEnd
 

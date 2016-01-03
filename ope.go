@@ -42,12 +42,8 @@ func (sv *SemanticValues) ToInt(i int) int {
 	return sv.Vs[i].V.(int)
 }
 
-func (sv *SemanticValues) ToByte(i int) byte {
-	return sv.Vs[i].V.(byte)
-}
-
-func (sv *SemanticValues) ToOpe(i int) Ope {
-	return sv.Vs[i].V.(Ope)
+func (sv *SemanticValues) ToOpe(i int) operator {
+	return sv.Vs[i].V.(operator)
 }
 
 // semanticValuesStack
@@ -96,7 +92,7 @@ type context struct {
 	svStack   semanticValuesStack
 	ruleStack ruleStack
 
-	whitespaceOpe Ope
+	whitespaceOpe operator
 	inWhitespace  bool
 	inToken       bool
 
@@ -112,7 +108,7 @@ func (c *context) setErrorPos(s string) {
 }
 
 // parse
-func parse(o Ope, s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func parse(o operator, s string, sv *SemanticValues, c *context, dt Any) (l int) {
 	if c.tracerBegin != nil {
 		pos := len(c.s) - len(s)
 		c.tracerBegin(o, s, sv, c, dt, pos)
@@ -127,7 +123,7 @@ func parse(o Ope, s string, sv *SemanticValues, c *context, dt Any) (l int) {
 }
 
 // Ope
-type Ope interface {
+type operator interface {
 	Label() string
 	parse(s string, sv *SemanticValues, c *context, dt Any) int
 	parseCore(s string, sv *SemanticValues, c *context, dt Any) int
@@ -136,7 +132,7 @@ type Ope interface {
 
 // opeBase
 type opeBase struct {
-	derived Ope
+	derived operator
 }
 
 func (o *opeBase) Label() string {
@@ -150,7 +146,7 @@ func (o *opeBase) parse(s string, sv *SemanticValues, c *context, dt Any) int {
 // sequence
 type sequence struct {
 	opeBase
-	opes []Ope
+	opes []operator
 }
 
 func (o *sequence) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
@@ -173,7 +169,7 @@ func (o *sequence) accept(v visitor) {
 // prioritizedChoice
 type prioritizedChoice struct {
 	opeBase
-	opes []Ope
+	opes []operator
 }
 
 func (o *prioritizedChoice) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
@@ -205,7 +201,7 @@ func (o *prioritizedChoice) accept(v visitor) {
 // zeroOrMore
 type zeroOrMore struct {
 	opeBase
-	ope Ope
+	ope operator
 }
 
 func (o *zeroOrMore) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
@@ -233,7 +229,7 @@ func (o *zeroOrMore) accept(v visitor) {
 // oneOrMore
 type oneOrMore struct {
 	opeBase
-	ope Ope
+	ope operator
 }
 
 func (o *oneOrMore) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
@@ -264,7 +260,7 @@ func (o *oneOrMore) accept(v visitor) {
 // option
 type option struct {
 	opeBase
-	ope Ope
+	ope operator
 }
 
 func (o *option) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
@@ -288,7 +284,7 @@ func (o *option) accept(v visitor) {
 // andPredicate
 type andPredicate struct {
 	opeBase
-	ope Ope
+	ope operator
 }
 
 func (o *andPredicate) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
@@ -311,7 +307,7 @@ func (o *andPredicate) accept(v visitor) {
 // notPredicate
 type notPredicate struct {
 	opeBase
-	ope Ope
+	ope operator
 }
 
 func (o *notPredicate) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
@@ -432,7 +428,7 @@ func (o *anyCharacter) accept(v visitor) {
 // tokenBoundary
 type tokenBoundary struct {
 	opeBase
-	ope Ope
+	ope operator
 }
 
 func (o *tokenBoundary) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
@@ -452,7 +448,7 @@ func (o *tokenBoundary) accept(v visitor) {
 // ignore
 type ignore struct {
 	opeBase
-	ope Ope
+	ope operator
 }
 
 func (o *ignore) parseCore(s string, sv *SemanticValues, c *context, dt Any) int {
@@ -498,14 +494,14 @@ func (o *reference) accept(v visitor) {
 	v.visitReference(o)
 }
 
-func (o *reference) getRule() Ope {
+func (o *reference) getRule() operator {
 	return o.grammar[o.name] // TODO: fixup
 }
 
 // whitespace
 type whitespace struct {
 	opeBase
-	ope Ope
+	ope operator
 }
 
 func (o *whitespace) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
@@ -522,77 +518,77 @@ func (o *whitespace) accept(v visitor) {
 	v.visitWhitespace(o)
 }
 
-func Seq(opes ...Ope) Ope {
+func Seq(opes ...operator) operator {
 	o := &sequence{opes: opes}
 	o.derived = o
 	return o
 }
-func Cho(opes ...Ope) Ope {
+func Cho(opes ...operator) operator {
 	o := &prioritizedChoice{opes: opes}
 	o.derived = o
 	return o
 }
-func Zom(ope Ope) Ope {
+func Zom(ope operator) operator {
 	o := &zeroOrMore{ope: ope}
 	o.derived = o
 	return o
 }
-func Oom(ope Ope) Ope {
+func Oom(ope operator) operator {
 	o := &oneOrMore{ope: ope}
 	o.derived = o
 	return o
 }
-func Opt(ope Ope) Ope {
+func Opt(ope operator) operator {
 	o := &option{ope: ope}
 	o.derived = o
 	return o
 }
-func Apd(ope Ope) Ope {
+func Apd(ope operator) operator {
 	o := &andPredicate{ope: ope}
 	o.derived = o
 	return o
 }
-func Npd(ope Ope) Ope {
+func Npd(ope operator) operator {
 	o := &notPredicate{ope: ope}
 	o.derived = o
 	return o
 }
-func Lit(lit string) Ope {
+func Lit(lit string) operator {
 	o := &literalString{lit: lit}
 	o.derived = o
 	return o
 }
-func Cls(chars string) Ope {
+func Cls(chars string) operator {
 	o := &characterClass{chars: chars}
 	o.derived = o
 	return o
 }
-func Dot() Ope {
+func Dot() operator {
 	o := &anyCharacter{}
 	o.derived = o
 	return o
 }
-func Tok(ope Ope) Ope {
+func Tok(ope operator) operator {
 	o := &tokenBoundary{ope: ope}
 	o.derived = o
 	return o
 }
-func Ign(ope Ope) Ope {
+func Ign(ope operator) operator {
 	o := &ignore{ope: ope}
 	o.derived = o
 	return o
 }
-func Usr(fn func(s string, sv *SemanticValues, dt Any) int) Ope {
+func Usr(fn func(s string, sv *SemanticValues, dt Any) int) operator {
 	o := &user{fn: fn}
 	o.derived = o
 	return o
 }
-func Ref(g map[string]*Rule, ident string, pos int) Ope {
+func Ref(g map[string]*Rule, ident string, pos int) operator {
 	o := &reference{grammar: g, name: ident, pos: pos}
 	o.derived = o
 	return o
 }
-func Wsp(ope Ope) Ope {
+func Wsp(ope operator) operator {
 	o := &whitespace{ope: Ign(ope)}
 	o.derived = o
 	return o

@@ -7,7 +7,7 @@ type Cases []struct {
 	want  int
 }
 
-func run(name string, t *testing.T, ope Ope, cases Cases) {
+func run(name string, t *testing.T, ope operator, cases Cases) {
 	for _, cs := range cases {
 		sv := &SemanticValues{}
 		c := &context{}

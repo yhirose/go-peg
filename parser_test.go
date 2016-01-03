@@ -427,15 +427,15 @@ func TestCalculator(t *testing.T) {
 		ret := sv.ToInt(0)
 		for i := 1; i < len(sv.Vs); i += 2 {
 			num := sv.ToInt(i + 1)
-			ope := sv.ToByte(i)
+			ope := sv.ToStr(i)
 			switch ope {
-			case '+':
+			case "+":
 				ret += num
-			case '-':
+			case "-":
 				ret -= num
-			case '*':
+			case "*":
 				ret *= num
-			case '/':
+			case "/":
 				ret /= num
 			}
 		}
@@ -444,15 +444,9 @@ func TestCalculator(t *testing.T) {
 
 	EXPRESSION.Action = reduce
 	TERM.Action = reduce
-	TERM_OPERATOR.Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
-		return byte(sv.S[0]), nil
-	}
-	FACTOR_OPERATOR.Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
-		return byte(sv.S[0]), nil
-	}
-	NUMBER.Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
-		return strconv.Atoi(sv.S)
-	}
+	TERM_OPERATOR.Action = func(sv *SemanticValues, dt Any) (v Any, err error) { return sv.S, nil }
+	FACTOR_OPERATOR.Action = func(sv *SemanticValues, dt Any) (v Any, err error) { return sv.S, nil }
+	NUMBER.Action = func(sv *SemanticValues, dt Any) (v Any, err error) { return strconv.Atoi(sv.S) }
 
 	// Parse
 	_, val, err := EXPRESSION.Parse("1+2*3*(4-5+6)/7-8", nil)
@@ -477,15 +471,15 @@ func TestCalculator2(t *testing.T) {
 		ret := sv.ToInt(0)
 		for i := 1; i < len(sv.Vs); i += 2 {
 			num := sv.ToInt(i + 1)
-			ope := sv.ToByte(i)
+			ope := sv.ToStr(i)
 			switch ope {
-			case '+':
+			case "+":
 				ret += num
-			case '-':
+			case "-":
 				ret -= num
-			case '*':
+			case "*":
 				ret *= num
-			case '/':
+			case "/":
 				ret /= num
 			}
 		}
@@ -495,15 +489,9 @@ func TestCalculator2(t *testing.T) {
 	g := parser.Grammar
 	g["EXPRESSION"].Action = reduce
 	g["TERM"].Action = reduce
-	g["TERM_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) {
-		return byte(sv.S[0]), nil
-	}
-	g["FACTOR_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) {
-		return byte(sv.S[0]), nil
-	}
-	g["NUMBER"].Action = func(sv *SemanticValues, dt Any) (Any, error) {
-		return strconv.Atoi(sv.S)
-	}
+	g["TERM_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return sv.S, nil }
+	g["FACTOR_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return sv.S, nil }
+	g["NUMBER"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return strconv.Atoi(sv.S) }
 
 	// Parse
 	val, err := parser.ParseAndGetValue("1+2*3*(4-5+6)/7-8", nil)
@@ -727,7 +715,7 @@ func TestLeftRecursiveWithEmptyString(t *testing.T) {
 func TestLeftUserRule(t *testing.T) {
 	syntax := " ROOT <- _ 'Hello' _ NAME '!' _ "
 
-	rules := map[string]Ope{
+	rules := map[string]operator{
 		"NAME": Usr(func(s string, sv *SemanticValues, dt Any) int {
 			names := []string{"PEG", "BNF"}
 			for _, name := range names {

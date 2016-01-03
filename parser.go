@@ -118,7 +118,7 @@ func init() {
 		if len(sv.Vs) == 1 {
 			v = sv.ToOpe(0)
 		} else {
-			var opes []Ope
+			var opes []operator
 			for i := 0; i < len(sv.Vs); i++ {
 				opes = append(opes, sv.ToOpe(i))
 			}
@@ -131,7 +131,7 @@ func init() {
 		if len(sv.Vs) == 1 {
 			v = sv.ToOpe(0)
 		} else {
-			var opes []Ope
+			var opes []operator
 			for i := 0; i < len(sv.Vs); i++ {
 				opes = append(opes, sv.ToOpe(i))
 			}
@@ -349,7 +349,7 @@ func NewParser(s string) (p *Parser, err *Error) {
 	return NewParserWithUserRules(s, nil)
 }
 
-func NewParserWithUserRules(s string, rules map[string]Ope) (p *Parser, err *Error) {
+func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err *Error) {
 	data := &data{
 		grammar:    make(map[string]*Rule),
 		references: make(map[string]int),
@@ -462,7 +462,7 @@ func Trace(p *Parser) {
 
 	level := 0
 	prevPos := 0
-	p.TracerBegin = func(o Ope, s string, sv *SemanticValues, c *context, dt Any, p int) {
+	p.TracerBegin = func(o operator, s string, sv *SemanticValues, c *context, dt Any, p int) {
 		var backtrack string
 		if p < prevPos {
 			backtrack = "*"
@@ -471,7 +471,7 @@ func Trace(p *Parser) {
 		prevPos = p
 		level++
 	}
-	p.TracerEnd = func(o Ope, s string, sv *SemanticValues, c *context, dt Any, l int) {
+	p.TracerEnd = func(o operator, s string, sv *SemanticValues, c *context, dt Any, l int) {
 		level--
 		fmt.Printf("%s%s (len:%d)\n", indent(level), o.Label(), l)
 	}

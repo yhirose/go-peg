@@ -9,7 +9,11 @@ import (
 	"github.com/yhirose/go-peg"
 )
 
-var usageMessage = `usage: peglint [-trace] grammar [source]
+var usageMessage = `usage: peglint [--trace] [grammar file path] [source file path]
+
+peglint checks syntax of a given PEG grammar file and reports errors. If the check is successful and a user gives a source file for the grammar, it will also check syntax of the source file.
+
+The -trace flag can be used with the source file. It prints names of rules and operators that the PEG parser detects on standard error.
 `
 
 func usage() {
@@ -47,24 +51,27 @@ func SetupTracer(p *peg.Parser) {
 		return s
 	}
 
-	fmt.Println("pos:lev\trule/ope")
-	fmt.Println("-------\t--------")
+	fmt.Fprintf(os.Stderr, "pos:lev\trule/ope")
+	fmt.Fprintf(os.Stderr, "-------\t--------")
 
 	level := 0
 	prevPos := 0
-	p.TracerBegin = func(name string, s string, v *peg.Values, d peg.Any, p int) {
+
+	p.TracerEnter = func(name string, s string, v *peg.Values, d peg.Any, p int) {
 		var backtrack string
 		if p < prevPos {
 			backtrack = "*"
 		}
-		fmt.Printf("%d:%d%s\t%s%s\n", p, level, backtrack, indent(level), name)
+		fmt.Fprintf(os.Stderr, "%d:%d%s\t%s%s\n", p, level, backtrack, indent(level), name)
 		prevPos = p
 		level++
 	}
-	p.TracerEnd = func(name string, s string, v *peg.Values, d peg.Any, l int) {
+
+	p.TracerLeave = func(name string, s string, v *peg.Values, d peg.Any, l int) {
 		level--
 	}
 }
+
 func main() {
 	flag.Usage = usage
 	flag.Parse()

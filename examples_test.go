@@ -2,8 +2,8 @@ package peg_test
 
 import (
 	"fmt"
+
 	. "github.com/yhirose/go-peg"
-	"strconv"
 )
 
 func Example() {
@@ -39,12 +39,11 @@ func Example() {
 	}
 
 	g := parser.Grammar
-
 	g["EXPRESSION"].Action = reduce
 	g["TERM"].Action = reduce
-	g["TERM_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return sv.S, nil }
-	g["FACTOR_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return sv.S, nil }
-	g["NUMBER"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return strconv.Atoi(sv.S) }
+	g["TERM_OPERATOR"].Action = ActionToStr
+	g["FACTOR_OPERATOR"].Action = ActionToStr
+	g["NUMBER"].Action = ActionToInt
 
 	// Parse
 	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
@@ -88,20 +87,10 @@ func Example_combinators() {
 	}
 
 	EXPRESSION.Action = reduce
-
 	TERM.Action = reduce
-
-	TERM_OPERATOR.Action = func(sv *SemanticValues, dt Any) (Any, error) {
-		return sv.S, nil
-	}
-
-	FACTOR_OPERATOR.Action = func(sv *SemanticValues, dt Any) (Any, error) {
-		return sv.S, nil
-	}
-
-	NUMBER.Action = func(sv *SemanticValues, dt Any) (Any, error) {
-		return strconv.Atoi(sv.S)
-	}
+	TERM_OPERATOR.Action = ActionToStr
+	FACTOR_OPERATOR.Action = ActionToStr
+	NUMBER.Action = ActionToInt
 
 	// Parse
 	l, v, _ := EXPRESSION.Parse(" (1 + 2 * (3 + 4)) / 5 - 6 ", nil)
@@ -146,12 +135,11 @@ func Example_whitespace() {
 	}
 
 	g := parser.Grammar
-
 	g["EXPRESSION"].Action = reduce
 	g["TERM"].Action = reduce
-	g["TERM_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return sv.S, nil }
-	g["FACTOR_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return sv.S, nil }
-	g["NUMBER"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return strconv.Atoi(sv.S) }
+	g["TERM_OPERATOR"].Action = ActionToStr
+	g["FACTOR_OPERATOR"].Action = ActionToStr
+	g["NUMBER"].Action = ActionToInt
 
 	// Parse
 	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "

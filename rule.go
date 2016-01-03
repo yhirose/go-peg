@@ -1,9 +1,6 @@
 package peg
 
-import (
-	"fmt"
-	"reflect"
-)
+import "fmt"
 
 // ErrorDetail
 type ErrorDetail struct {
@@ -12,20 +9,25 @@ type ErrorDetail struct {
 	Msg string
 }
 
+func (d ErrorDetail) Error() string {
+	return fmt.Sprintf("%d:%d %s", d.Ln, d.Col, d.Msg)
+}
+
 // Error
 type Error struct {
 	Details []ErrorDetail
 }
 
 func (e *Error) Error() string {
-	return "syntax error..." // TODO: Better error report
+	d := e.Details[0]
+	return fmt.Sprintf("%d:%d %s", d.Ln, d.Col, d.Msg)
 }
 
 // TracerBegin
-type TracerBegin func(o operator, s string, sv *SemanticValues, c *context, dt Any, p int)
+type TracerBegin func(name string, s string, sv *SemanticValues, dt Any, p int)
 
 // TracerEnd
-type TracerEnd func(o operator, s string, sv *SemanticValues, c *context, dt Any, l int)
+type TracerEnd func(name string, s string, sv *SemanticValues, dt Any, l int)
 
 // Rule
 type Rule struct {
@@ -84,7 +86,7 @@ func (r *Rule) Parse(s string, dt Any) (l int, v Any, err *Error) {
 }
 
 func (o *Rule) Label() string {
-	return fmt.Sprintf("%v[%s]", reflect.TypeOf(o), o.Name)
+	return fmt.Sprintf("[%s]", o.Name)
 }
 
 func (o *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {

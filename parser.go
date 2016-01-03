@@ -1,7 +1,5 @@
 package peg
 
-import "fmt"
-
 const (
 	WhitespceRuleName = "%whitespace"
 )
@@ -447,32 +445,4 @@ func (p *Parser) ParseAndGetValue(s string, dt Any) (v Any, err *Error) {
 	r.TracerEnd = p.TracerEnd
 	_, v, err = r.Parse(s, dt)
 	return
-}
-
-// Trace
-func Trace(p *Parser) {
-	indent := func(level int) string {
-		s := ""
-		for level > 0 {
-			s = s + "  "
-			level--
-		}
-		return s
-	}
-
-	level := 0
-	prevPos := 0
-	p.TracerBegin = func(o operator, s string, sv *SemanticValues, c *context, dt Any, p int) {
-		var backtrack string
-		if p < prevPos {
-			backtrack = "*"
-		}
-		fmt.Printf("%s%s%s (pos:%d)\n", indent(level), backtrack, o.Label(), p)
-		prevPos = p
-		level++
-	}
-	p.TracerEnd = func(o operator, s string, sv *SemanticValues, c *context, dt Any, l int) {
-		level--
-		fmt.Printf("%s%s (len:%d)\n", indent(level), o.Label(), l)
-	}
 }

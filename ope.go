@@ -111,13 +111,13 @@ func (c *context) setErrorPos(s string) {
 func parse(o operator, s string, sv *SemanticValues, c *context, dt Any) (l int) {
 	if c.tracerBegin != nil {
 		pos := len(c.s) - len(s)
-		c.tracerBegin(o, s, sv, c, dt, pos)
+		c.tracerBegin(o.Label(), s, sv, dt, pos)
 	}
 
 	l = o.parseCore(s, sv, c, dt)
 
 	if c.tracerEnd != nil {
-		c.tracerEnd(o, s, sv, c, dt, l)
+		c.tracerEnd(o.Label(), s, sv, dt, l)
 	}
 	return
 }
@@ -136,7 +136,7 @@ type opeBase struct {
 }
 
 func (o *opeBase) Label() string {
-	return reflect.TypeOf(o.derived).String()
+	return reflect.TypeOf(o.derived).String()[5:]
 }
 
 func (o *opeBase) parse(s string, sv *SemanticValues, c *context, dt Any) int {

@@ -139,6 +139,7 @@ func (r *Rule) parseCore(s string, sv *Values, c *context, d Any) int {
 		} else {
 			tok = s[:l]
 			chldsv.S = s[:l]
+			chldsv.Pos = len(c.s) - len(s)
 		}
 
 		if r.Action != nil {

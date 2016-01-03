@@ -83,8 +83,8 @@ func init() {
 	rIGNORE.Ope = Lit("~")
 
 	// Setup actions
-	rDefinition.Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
-		data := dt.(*data)
+	rDefinition.Action = func(sv *Values, d Any) (v Any, err error) {
+		data := d.(*data)
 
 		ignore := len(sv.Vs) == 4
 
@@ -112,7 +112,7 @@ func init() {
 		return
 	}
 
-	rExpression.Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	rExpression.Action = func(sv *Values, d Any) (v Any, err error) {
 		if len(sv.Vs) == 1 {
 			v = sv.ToOpe(0)
 		} else {
@@ -125,7 +125,7 @@ func init() {
 		return
 	}
 
-	rSequence.Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	rSequence.Action = func(sv *Values, d Any) (v Any, err error) {
 		if len(sv.Vs) == 1 {
 			v = sv.ToOpe(0)
 		} else {
@@ -138,7 +138,7 @@ func init() {
 		return
 	}
 
-	rPrefix.Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	rPrefix.Action = func(sv *Values, d Any) (v Any, err error) {
 		if len(sv.Vs) == 1 {
 			v = sv.ToOpe(0)
 		} else {
@@ -154,7 +154,7 @@ func init() {
 		return
 	}
 
-	rSuffix.Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	rSuffix.Action = func(sv *Values, d Any) (v Any, err error) {
 		ope := sv.ToOpe(0)
 		if len(sv.Vs) == 1 {
 			v = ope
@@ -172,8 +172,8 @@ func init() {
 		return
 	}
 
-	rPrimary.Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
-		data := dt.(*data)
+	rPrimary.Action = func(sv *Values, d Any) (v Any, err error) {
+		data := d.(*data)
 
 		switch sv.Choice {
 		case 0: // Reference
@@ -204,35 +204,35 @@ func init() {
 		return
 	}
 
-	rIdentCont.Action = func(sv *SemanticValues, dt Any) (Any, error) {
+	rIdentCont.Action = func(sv *Values, d Any) (Any, error) {
 		return sv.S, nil
 	}
 
-	rLiteral.Action = func(sv *SemanticValues, dt Any) (Any, error) {
+	rLiteral.Action = func(sv *Values, d Any) (Any, error) {
 		return Lit(resolveEscapeSequence(sv.S)), nil
 	}
 
-	rClass.Action = func(sv *SemanticValues, dt Any) (Any, error) {
+	rClass.Action = func(sv *Values, d Any) (Any, error) {
 		return Cls(resolveEscapeSequence(sv.S)), nil
 	}
 
-	rAND.Action = func(sv *SemanticValues, dt Any) (Any, error) {
+	rAND.Action = func(sv *Values, d Any) (Any, error) {
 		return sv.S[:1], nil
 	}
-	rNOT.Action = func(sv *SemanticValues, dt Any) (Any, error) {
+	rNOT.Action = func(sv *Values, d Any) (Any, error) {
 		return sv.S[:1], nil
 	}
-	rQUESTION.Action = func(sv *SemanticValues, dt Any) (Any, error) {
+	rQUESTION.Action = func(sv *Values, d Any) (Any, error) {
 		return sv.S[:1], nil
 	}
-	rSTAR.Action = func(sv *SemanticValues, dt Any) (Any, error) {
+	rSTAR.Action = func(sv *Values, d Any) (Any, error) {
 		return sv.S[:1], nil
 	}
-	rPLUS.Action = func(sv *SemanticValues, dt Any) (Any, error) {
+	rPLUS.Action = func(sv *Values, d Any) (Any, error) {
 		return sv.S[:1], nil
 	}
 
-	rDOT.Action = func(sv *SemanticValues, dt Any) (Any, error) {
+	rDOT.Action = func(sv *Values, d Any) (Any, error) {
 		return Dot(), nil
 	}
 }
@@ -339,8 +339,8 @@ func resolveEscapeSequence(s string) string {
 type Parser struct {
 	Grammar     map[string]*Rule
 	start       string
-	TracerBegin TracerBegin
-	TracerEnd   TracerEnd
+	TracerBegin TracerEnter
+	TracerEnd   TracerLeave
 }
 
 func NewParser(s string) (p *Parser, err *Error) {
@@ -434,15 +434,15 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 	return
 }
 
-func (p *Parser) Parse(s string, dt Any) (err *Error) {
-	_, err = p.ParseAndGetValue(s, dt)
+func (p *Parser) Parse(s string, d Any) (err *Error) {
+	_, err = p.ParseAndGetValue(s, d)
 	return
 }
 
-func (p *Parser) ParseAndGetValue(s string, dt Any) (v Any, err *Error) {
+func (p *Parser) ParseAndGetValue(s string, d Any) (v Any, err *Error) {
 	r := p.Grammar[p.start]
-	r.TracerBegin = p.TracerBegin
-	r.TracerEnd = p.TracerEnd
-	_, v, err = r.Parse(s, dt)
+	r.TracerEnter = p.TracerBegin
+	r.TracerLeave = p.TracerEnd
+	_, v, err = r.Parse(s, d)
 	return
 }

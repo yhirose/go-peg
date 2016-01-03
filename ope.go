@@ -14,15 +14,15 @@ func fail(l int) bool {
 type Any interface {
 }
 
-// SemanticValue
-type SemanticValue struct {
+// Semantic value
+type Value struct {
 	V Any
 	S string
 }
 
-// SemanticValues
-type SemanticValues struct {
-	Vs     []SemanticValue
+// Semantic values
+type Values struct {
+	Vs     []Value
 	Pos    int
 	S      string
 	Choice int
@@ -30,29 +30,29 @@ type SemanticValues struct {
 	isValidString bool
 }
 
-func (sv *SemanticValues) Len() int {
-	return len(sv.Vs)
+func (v *Values) Len() int {
+	return len(v.Vs)
 }
 
-func (sv *SemanticValues) ToStr(i int) string {
-	return sv.Vs[i].V.(string)
+func (v *Values) ToStr(i int) string {
+	return v.Vs[i].V.(string)
 }
 
-func (sv *SemanticValues) ToInt(i int) int {
-	return sv.Vs[i].V.(int)
+func (v *Values) ToInt(i int) int {
+	return v.Vs[i].V.(int)
 }
 
-func (sv *SemanticValues) ToOpe(i int) operator {
-	return sv.Vs[i].V.(operator)
+func (v *Values) ToOpe(i int) operator {
+	return v.Vs[i].V.(operator)
 }
 
-// semanticValuesStack
+// Semantic values stack
 type semanticValuesStack struct {
-	vs []SemanticValues
+	vs []Values
 }
 
-func (s *semanticValuesStack) push() *SemanticValues {
-	s.vs = append(s.vs, SemanticValues{})
+func (s *semanticValuesStack) push() *Values {
+	s.vs = append(s.vs, Values{})
 	return &s.vs[len(s.vs)-1]
 }
 
@@ -60,7 +60,7 @@ func (s *semanticValuesStack) pop() {
 	s.vs = s.vs[:len(s.vs)-1]
 }
 
-// ruleStack
+// Rule stack
 type ruleStack struct {
 	rules []*Rule
 }
@@ -81,7 +81,7 @@ func (s *ruleStack) top() *Rule {
 	return s.rules[len(s.rules)-1]
 }
 
-// context
+// Context
 type context struct {
 	s string
 
@@ -96,8 +96,8 @@ type context struct {
 	inWhitespace  bool
 	inToken       bool
 
-	tracerBegin TracerBegin
-	tracerEnd   TracerEnd
+	tracerEnter TracerEnter
+	tracerLeave TracerLeave
 }
 
 func (c *context) setErrorPos(s string) {
@@ -107,30 +107,29 @@ func (c *context) setErrorPos(s string) {
 	}
 }
 
-// parse
-func parse(o operator, s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	if c.tracerBegin != nil {
+func parse(o operator, s string, v *Values, c *context, d Any) (l int) {
+	if c.tracerEnter != nil {
 		pos := len(c.s) - len(s)
-		c.tracerBegin(o.Label(), s, sv, dt, pos)
+		c.tracerEnter(o.Label(), s, v, d, pos)
 	}
 
-	l = o.parseCore(s, sv, c, dt)
+	l = o.parseCore(s, v, c, d)
 
-	if c.tracerEnd != nil {
-		c.tracerEnd(o.Label(), s, sv, dt, l)
+	if c.tracerLeave != nil {
+		c.tracerLeave(o.Label(), s, v, d, l)
 	}
 	return
 }
 
-// Ope
+// Operator
 type operator interface {
 	Label() string
-	parse(s string, sv *SemanticValues, c *context, dt Any) int
-	parseCore(s string, sv *SemanticValues, c *context, dt Any) int
+	parse(s string, v *Values, c *context, d Any) int
+	parseCore(s string, v *Values, c *context, d Any) int
 	accept(v visitor)
 }
 
-// opeBase
+// Operator base
 type opeBase struct {
 	derived operator
 }
@@ -139,20 +138,20 @@ func (o *opeBase) Label() string {
 	return reflect.TypeOf(o.derived).String()[5:]
 }
 
-func (o *opeBase) parse(s string, sv *SemanticValues, c *context, dt Any) int {
-	return parse(o.derived, s, sv, c, dt)
+func (o *opeBase) parse(s string, v *Values, c *context, d Any) int {
+	return parse(o.derived, s, v, c, d)
 }
 
-// sequence
+// Sequence
 type sequence struct {
 	opeBase
 	opes []operator
 }
 
-func (o *sequence) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *sequence) parseCore(s string, v *Values, c *context, d Any) (l int) {
 	l = 0
 	for _, ope := range o.opes {
-		chldl := ope.parse(s[l:], sv, c, dt)
+		chldl := ope.parse(s[l:], v, c, d)
 		if fail(chldl) {
 			l = -1
 			return
@@ -166,26 +165,26 @@ func (o *sequence) accept(v visitor) {
 	v.visitSequence(o)
 }
 
-// prioritizedChoice
+// Prioritized Choice
 type prioritizedChoice struct {
 	opeBase
 	opes []operator
 }
 
-func (o *prioritizedChoice) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *prioritizedChoice) parseCore(s string, v *Values, c *context, d Any) (l int) {
 	id := 0
 	for _, ope := range o.opes {
 		chldsv := c.svStack.push()
-		l = ope.parse(s, chldsv, c, dt)
+		l = ope.parse(s, chldsv, c, d)
 		c.svStack.pop()
 		if success(l) {
 			if len(chldsv.Vs) > 0 {
-				sv.Vs = append(sv.Vs, chldsv.Vs...)
+				v.Vs = append(v.Vs, chldsv.Vs...)
 			}
-			sv.Pos = chldsv.Pos
-			sv.S = chldsv.S
-			sv.isValidString = chldsv.isValidString
-			sv.Choice = id
+			v.Pos = chldsv.Pos
+			v.S = chldsv.S
+			v.isValidString = chldsv.isValidString
+			v.Choice = id
 			return
 		}
 		id++
@@ -198,21 +197,21 @@ func (o *prioritizedChoice) accept(v visitor) {
 	v.visitPrioritizedChoice(o)
 }
 
-// zeroOrMore
+// Zero or More
 type zeroOrMore struct {
 	opeBase
 	ope operator
 }
 
-func (o *zeroOrMore) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *zeroOrMore) parseCore(s string, v *Values, c *context, d Any) (l int) {
 	saveErrorPos := c.errorPos
 	l = 0
 	for len(s)-l > 0 {
-		saveVs := sv.Vs
-		chldl := o.ope.parse(s[l:], sv, c, dt)
+		saveVs := v.Vs
+		chldl := o.ope.parse(s[l:], v, c, d)
 		if fail(chldl) {
-			if len(sv.Vs) != len(saveVs) {
-				sv.Vs = saveVs
+			if len(v.Vs) != len(saveVs) {
+				v.Vs = saveVs
 			}
 			c.errorPos = saveErrorPos
 			break
@@ -226,24 +225,24 @@ func (o *zeroOrMore) accept(v visitor) {
 	v.visitZeroOrMore(o)
 }
 
-// oneOrMore
+// One or More
 type oneOrMore struct {
 	opeBase
 	ope operator
 }
 
-func (o *oneOrMore) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	l = o.ope.parse(s, sv, c, dt)
+func (o *oneOrMore) parseCore(s string, v *Values, c *context, d Any) (l int) {
+	l = o.ope.parse(s, v, c, d)
 	if fail(l) {
 		return
 	}
 	saveErrorPos := c.errorPos
 	for len(s)-l > 0 {
-		saveVs := sv.Vs
-		chldl := o.ope.parse(s[l:], sv, c, dt)
+		saveVs := v.Vs
+		chldl := o.ope.parse(s[l:], v, c, d)
 		if fail(chldl) {
-			if len(sv.Vs) != len(saveVs) {
-				sv.Vs = saveVs
+			if len(v.Vs) != len(saveVs) {
+				v.Vs = saveVs
 			}
 			c.errorPos = saveErrorPos
 			break
@@ -257,19 +256,19 @@ func (o *oneOrMore) accept(v visitor) {
 	v.visitOneOrMore(o)
 }
 
-// option
+// Option
 type option struct {
 	opeBase
 	ope operator
 }
 
-func (o *option) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *option) parseCore(s string, v *Values, c *context, d Any) (l int) {
 	saveErrorPos := c.errorPos
-	saveVs := sv.Vs
-	l = o.ope.parse(s, sv, c, dt)
+	saveVs := v.Vs
+	l = o.ope.parse(s, v, c, d)
 	if fail(l) {
-		if len(sv.Vs) != len(saveVs) {
-			sv.Vs = saveVs
+		if len(v.Vs) != len(saveVs) {
+			v.Vs = saveVs
 		}
 		c.errorPos = saveErrorPos
 		l = 0
@@ -281,15 +280,15 @@ func (o *option) accept(v visitor) {
 	v.visitOption(o)
 }
 
-// andPredicate
+// And Predicate
 type andPredicate struct {
 	opeBase
 	ope operator
 }
 
-func (o *andPredicate) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *andPredicate) parseCore(s string, v *Values, c *context, d Any) (l int) {
 	chldsv := c.svStack.push()
-	chldl := o.ope.parse(s, chldsv, c, dt)
+	chldl := o.ope.parse(s, chldsv, c, d)
 	c.svStack.pop()
 
 	if success(chldl) {
@@ -304,17 +303,17 @@ func (o *andPredicate) accept(v visitor) {
 	v.visitAndPredicate(o)
 }
 
-// notPredicate
+// Not Predicate
 type notPredicate struct {
 	opeBase
 	ope operator
 }
 
-func (o *notPredicate) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *notPredicate) parseCore(s string, v *Values, c *context, d Any) (l int) {
 	saveErrorPos := c.errorPos
 
 	chldsv := c.svStack.push()
-	chldl := o.ope.parse(s, chldsv, c, dt)
+	chldl := o.ope.parse(s, chldsv, c, d)
 	c.svStack.pop()
 
 	if success(chldl) {
@@ -331,13 +330,13 @@ func (o *notPredicate) accept(v visitor) {
 	v.visitNotPredicate(o)
 }
 
-// literalString
+// Literal String
 type literalString struct {
 	opeBase
 	lit string
 }
 
-func (o *literalString) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *literalString) parseCore(s string, v *Values, c *context, d Any) (l int) {
 	l = 0
 	for ; l < len(o.lit); l++ {
 		if l >= len(s) || s[l] != o.lit[l] {
@@ -351,7 +350,7 @@ func (o *literalString) parseCore(s string, sv *SemanticValues, c *context, dt A
 	if c.whitespaceOpe != nil && c.ruleStack.size() > 0 {
 		r := c.ruleStack.top()
 		if !r.isToken() {
-			len := c.whitespaceOpe.parse(s[l:], sv, c, dt)
+			len := c.whitespaceOpe.parse(s[l:], v, c, d)
 			if fail(len) {
 				l = -1
 				return
@@ -366,13 +365,13 @@ func (o *literalString) accept(v visitor) {
 	v.visitLiteralString(o)
 }
 
-// characterClass
+// Character Class
 type characterClass struct {
 	opeBase
 	chars string
 }
 
-func (o *characterClass) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *characterClass) parseCore(s string, v *Values, c *context, d Any) (l int) {
 	// TODO: UTF8 support
 	if len(s) < 1 {
 		c.setErrorPos(s)
@@ -405,12 +404,12 @@ func (o *characterClass) accept(v visitor) {
 	v.visitCharacterClass(o)
 }
 
-// anyCharacter
+// Any Character
 type anyCharacter struct {
 	opeBase
 }
 
-func (o *anyCharacter) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *anyCharacter) parseCore(s string, v *Values, c *context, d Any) (l int) {
 	// TODO: UTF8 support
 	if len(s) < 1 {
 		c.setErrorPos(s)
@@ -425,18 +424,18 @@ func (o *anyCharacter) accept(v visitor) {
 	v.visitAnyCharacter(o)
 }
 
-// tokenBoundary
+// Token Boundary
 type tokenBoundary struct {
 	opeBase
 	ope operator
 }
 
-func (o *tokenBoundary) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
-	l = o.ope.parse(s, sv, c, dt)
+func (o *tokenBoundary) parseCore(s string, v *Values, c *context, d Any) (l int) {
+	l = o.ope.parse(s, v, c, d)
 	if success(l) {
-		sv.Pos = len(c.s) - len(s)
-		sv.S = s[:l]
-		sv.isValidString = true
+		v.Pos = len(c.s) - len(s)
+		v.S = s[:l]
+		v.isValidString = true
 	}
 	return
 }
@@ -445,15 +444,15 @@ func (o *tokenBoundary) accept(v visitor) {
 	v.visitTokenBoundary(o)
 }
 
-// ignore
+// Ignore
 type ignore struct {
 	opeBase
 	ope operator
 }
 
-func (o *ignore) parseCore(s string, sv *SemanticValues, c *context, dt Any) int {
+func (o *ignore) parseCore(s string, v *Values, c *context, d Any) int {
 	chldsv := c.svStack.push()
-	l := o.ope.parse(s, chldsv, c, dt)
+	l := o.ope.parse(s, chldsv, c, d)
 	c.svStack.pop()
 	return l
 }
@@ -462,21 +461,21 @@ func (o *ignore) accept(v visitor) {
 	v.visitIgnore(o)
 }
 
-// user
+// User
 type user struct {
 	opeBase
-	fn func(s string, sv *SemanticValues, dt Any) int
+	fn func(s string, v *Values, d Any) int
 }
 
-func (o *user) parseCore(s string, sv *SemanticValues, c *context, dt Any) int {
-	return o.fn(s, sv, dt)
+func (o *user) parseCore(s string, v *Values, c *context, d Any) int {
+	return o.fn(s, v, d)
 }
 
 func (o *user) accept(v visitor) {
 	v.visitUser(o)
 }
 
-// reference
+// Reference
 type reference struct {
 	opeBase
 	grammar map[string]*Rule
@@ -484,9 +483,9 @@ type reference struct {
 	pos     int
 }
 
-func (o *reference) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *reference) parseCore(s string, v *Values, c *context, d Any) (l int) {
 	rule := o.getRule()
-	l = rule.parse(s, sv, c, dt)
+	l = rule.parse(s, v, c, d)
 	return
 }
 
@@ -498,18 +497,18 @@ func (o *reference) getRule() operator {
 	return o.grammar[o.name] // TODO: fixup
 }
 
-// whitespace
+// Whitespace
 type whitespace struct {
 	opeBase
 	ope operator
 }
 
-func (o *whitespace) parseCore(s string, sv *SemanticValues, c *context, dt Any) (l int) {
+func (o *whitespace) parseCore(s string, v *Values, c *context, d Any) (l int) {
 	if c.inWhitespace {
 		return 0
 	}
 	c.inWhitespace = true
-	l = o.ope.parse(s, sv, c, dt)
+	l = o.ope.parse(s, v, c, d)
 	c.inWhitespace = false
 	return
 }
@@ -578,7 +577,7 @@ func Ign(ope operator) operator {
 	o.derived = o
 	return o
 }
-func Usr(fn func(s string, sv *SemanticValues, dt Any) int) operator {
+func Usr(fn func(s string, v *Values, d Any) int) operator {
 	o := &user{fn: fn}
 	o.derived = o
 	return o

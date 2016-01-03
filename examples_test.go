@@ -2,7 +2,6 @@ package peg_test
 
 import (
 	"fmt"
-
 	. "github.com/yhirose/go-peg"
 )
 
@@ -20,11 +19,11 @@ func Example() {
     `)
 
 	// Setup actions
-	reduce := func(sv *SemanticValues, dt Any) (Any, error) {
-		val := sv.ToInt(0)
-		for i := 1; i < len(sv.Vs); i += 2 {
-			num := sv.ToInt(i + 1)
-			switch sv.ToStr(i) {
+	reduce := func(v *Values, d Any) (Any, error) {
+		val := v.ToInt(0)
+		for i := 1; i < len(v.Vs); i += 2 {
+			num := v.ToInt(i + 1)
+			switch v.ToStr(i) {
 			case "+":
 				val += num
 			case "-":
@@ -67,11 +66,11 @@ func Example_combinators() {
 	EXPRESSION.WhitespaceOpe = Zom(Cls(" \t"))
 
 	// Actions
-	reduce := func(sv *SemanticValues, dt Any) (Any, error) {
-		ret := sv.ToInt(0)
-		for i := 1; i < len(sv.Vs); i += 2 {
-			ope := sv.ToStr(i)
-			n := sv.ToInt(i + 1)
+	reduce := func(v *Values, d Any) (Any, error) {
+		ret := v.ToInt(0)
+		for i := 1; i < len(v.Vs); i += 2 {
+			ope := v.ToStr(i)
+			n := v.ToInt(i + 1)
 			switch ope {
 			case "+":
 				ret += n
@@ -116,11 +115,11 @@ func Example_whitespace() {
     `)
 
 	// Setup actions
-	reduce := func(sv *SemanticValues, dt Any) (Any, error) {
-		val := sv.ToInt(0)
-		for i := 1; i < len(sv.Vs); i += 2 {
-			num := sv.ToInt(i + 1)
-			switch sv.ToStr(i) {
+	reduce := func(v *Values, d Any) (Any, error) {
+		val := v.ToInt(0)
+		for i := 1; i < len(v.Vs); i += 2 {
+			num := v.ToInt(i + 1)
+			switch v.ToStr(i) {
 			case "+":
 				val += num
 			case "-":

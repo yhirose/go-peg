@@ -2,7 +2,7 @@ package peg
 
 import "fmt"
 
-// ErrorDetail
+// Error detail
 type ErrorDetail struct {
 	Ln  int
 	Col int
@@ -23,40 +23,40 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("%d:%d %s", d.Ln, d.Col, d.Msg)
 }
 
-// TracerBegin
-type TracerBegin func(name string, s string, sv *SemanticValues, dt Any, p int)
+// Tracer enter
+type TracerEnter func(name string, s string, sv *Values, d Any, p int)
 
-// TracerEnd
-type TracerEnd func(name string, s string, sv *SemanticValues, dt Any, l int)
+// Tracer leave
+type TracerLeave func(name string, s string, sv *Values, d Any, l int)
 
 // Rule
 type Rule struct {
 	Name          string
 	Ope           operator
-	Action        func(sv *SemanticValues, dt Any) (Any, error)
-	Enter         func(dt Any)
-	Exit          func(dt Any)
+	Action        func(sv *Values, d Any) (Any, error)
+	Enter         func(d Any)
+	Leave         func(d Any)
 	Message       func() (message string)
 	Ignore        bool
 	WhitespaceOpe operator
-	TracerBegin   TracerBegin
-	TracerEnd     TracerEnd
+	TracerEnter   TracerEnter
+	TracerLeave   TracerLeave
 
 	tokenChecker *tokenChecker
 }
 
-func (r *Rule) Parse(s string, dt Any) (l int, v Any, err *Error) {
-	sv := &SemanticValues{}
+func (r *Rule) Parse(s string, d Any) (l int, v Any, err *Error) {
+	sv := &Values{}
 	c := &context{
 		s:             s,
 		errorPos:      -1,
 		messagePos:    -1,
 		whitespaceOpe: r.WhitespaceOpe,
-		tracerBegin:   r.TracerBegin,
-		tracerEnd:     r.TracerEnd,
+		tracerEnter:   r.TracerEnter,
+		tracerLeave:   r.TracerLeave,
 	}
 
-	l = r.parse(s, sv, c, dt)
+	l = r.parse(s, sv, c, d)
 
 	if success(l) && len(sv.Vs) > 0 && sv.Vs[0].V != nil {
 		v = sv.Vs[0].V
@@ -89,13 +89,13 @@ func (o *Rule) Label() string {
 	return fmt.Sprintf("[%s]", o.Name)
 }
 
-func (o *Rule) parse(s string, sv *SemanticValues, c *context, dt Any) int {
-	return parse(o, s, sv, c, dt)
+func (o *Rule) parse(s string, sv *Values, c *context, d Any) int {
+	return parse(o, s, sv, c, d)
 }
 
-func (r *Rule) parseCore(s string, sv *SemanticValues, c *context, dt Any) int {
+func (r *Rule) parseCore(s string, sv *Values, c *context, d Any) int {
 	if r.Enter != nil {
-		r.Enter(dt)
+		r.Enter(d)
 	}
 
 	c.ruleStack.push(r)
@@ -123,10 +123,10 @@ func (r *Rule) parseCore(s string, sv *SemanticValues, c *context, dt Any) int {
 	var l int
 	if !c.inToken && r.isToken() {
 		c.inToken = true
-		l = ope.parse(s, chldsv, c, dt)
+		l = ope.parse(s, chldsv, c, d)
 		c.inToken = false
 	} else {
-		l = ope.parse(s, chldsv, c, dt)
+		l = ope.parse(s, chldsv, c, d)
 	}
 
 	// Invoke action
@@ -143,7 +143,7 @@ func (r *Rule) parseCore(s string, sv *SemanticValues, c *context, dt Any) int {
 
 		if r.Action != nil {
 			var err error
-			if v, err = r.Action(chldsv, dt); err != nil {
+			if v, err = r.Action(chldsv, d); err != nil {
 				pos := len(c.s) - len(s)
 				if c.messagePos < pos {
 					c.messagePos = pos
@@ -158,7 +158,7 @@ func (r *Rule) parseCore(s string, sv *SemanticValues, c *context, dt Any) int {
 
 	if success(l) {
 		if r.Ignore == false {
-			sv.Vs = append(sv.Vs, SemanticValue{v, tok})
+			sv.Vs = append(sv.Vs, Value{v, tok})
 		}
 	} else {
 		if r.Message != nil {
@@ -173,8 +173,8 @@ func (r *Rule) parseCore(s string, sv *SemanticValues, c *context, dt Any) int {
 	c.svStack.pop()
 	c.ruleStack.pop()
 
-	if r.Exit != nil {
-		r.Exit(dt)
+	if r.Leave != nil {
+		r.Leave(d)
 	}
 
 	return l

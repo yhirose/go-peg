@@ -38,7 +38,7 @@ func TestStringCapture(t *testing.T) {
 	`)
 
 	var tags []string
-	parser.Grammar["TAG_NAME"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	parser.Grammar["TAG_NAME"].Action = func(sv *Values, d Any) (v Any, err error) {
 		tags = append(tags, sv.S)
 		return
 	}
@@ -78,7 +78,7 @@ func TestStringCapture2(t *testing.T) {
 	TAG_NAME.Ope = Oom(Seq(Npd(Lit("]")), Dot()))
 	WS.Ope = Zom(Cls(" \t"))
 
-	TAG_NAME.Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	TAG_NAME.Action = func(sv *Values, d Any) (v Any, err error) {
 		tags = append(tags, sv.S)
 		return
 	}
@@ -101,7 +101,7 @@ func TestStringCapture3(t *testing.T) {
 	parser, _ := NewParser(syntax)
 
 	var tags []string
-	parser.Grammar["TOKEN"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	parser.Grammar["TOKEN"].Action = func(sv *Values, d Any) (v Any, err error) {
 		tags = append(tags, sv.S)
 		return
 	}
@@ -207,7 +207,7 @@ func TestLambdaAction(t *testing.T) {
 	`)
 
 	var ss string
-	parser.Grammar["CHAR"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	parser.Grammar["CHAR"].Action = func(sv *Values, d Any) (v Any, err error) {
 		ss += sv.S
 		return
 	}
@@ -224,17 +224,17 @@ func TestEnterExitHandlers(t *testing.T) {
         TOKEN  <- [A-Za-z]+
 	`)
 
-	parser.Grammar["LTOKEN"].Enter = func(dt Any) {
-		*dt.(*bool) = false
+	parser.Grammar["LTOKEN"].Enter = func(d Any) {
+		*d.(*bool) = false
 	}
-	parser.Grammar["LTOKEN"].Exit = func(dt Any) {
-		*dt.(*bool) = true
+	parser.Grammar["LTOKEN"].Leave = func(d Any) {
+		*d.(*bool) = true
 	}
 
 	msg := "should be upper case string..."
 
-	parser.Grammar["TOKEN"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
-		if *dt.(*bool) {
+	parser.Grammar["TOKEN"].Action = func(sv *Values, d Any) (v Any, err error) {
+		if *d.(*bool) {
 			if sv.S != strings.ToUpper(sv.S) {
 				err = errors.New(msg)
 			}
@@ -243,13 +243,13 @@ func TestEnterExitHandlers(t *testing.T) {
 	}
 
 	requireUpperCase := false
-	var dt Any = &requireUpperCase
-	assert(t, parser.Parse("hello=world", dt) != nil)
-	assert(t, parser.Parse("HELLO=world", dt) != nil)
-	assert(t, parser.Parse("hello=WORLD", dt) == nil)
-	assert(t, parser.Parse("HELLO=WORLD", dt) == nil)
+	var d Any = &requireUpperCase
+	assert(t, parser.Parse("hello=world", d) != nil)
+	assert(t, parser.Parse("HELLO=world", d) != nil)
+	assert(t, parser.Parse("hello=WORLD", d) == nil)
+	assert(t, parser.Parse("HELLO=WORLD", d) == nil)
 
-	err := parser.Parse("hello=world", dt)
+	err := parser.Parse("hello=world", d)
 	assert(t, err.Details[0].Ln == 1)
 	assert(t, err.Details[0].Col == 7)
 	assert(t, err.Details[0].Msg == msg)
@@ -284,7 +284,7 @@ func TestWhitespace2(t *testing.T) {
 	`)
 
 	var items []string
-	parser.Grammar["ITEM"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	parser.Grammar["ITEM"].Action = func(sv *Values, d Any) (v Any, err error) {
 		items = append(items, sv.S)
 		return
 	}
@@ -304,7 +304,7 @@ func TestSkipToken(t *testing.T) {
         ~_    <-  [ \t]*
 	`)
 
-	parser.Grammar["ROOT"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	parser.Grammar["ROOT"].Action = func(sv *Values, d Any) (v Any, err error) {
 		assert(t, len(sv.Vs) == 2)
 		return
 	}
@@ -319,7 +319,7 @@ func TestSkipToken2(t *testing.T) {
         %whitespace <-  [ \t]*
 	`)
 
-	parser.Grammar["ROOT"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	parser.Grammar["ROOT"].Action = func(sv *Values, d Any) (v Any, err error) {
 		assert(t, len(sv.Vs) == 2)
 		return
 	}
@@ -381,7 +381,7 @@ func TestSimpleCalculator(t *testing.T) {
         Number    <- [0-9]+
     `)
 
-	parser.Grammar["Additive"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	parser.Grammar["Additive"].Action = func(sv *Values, d Any) (v Any, err error) {
 		switch sv.Choice {
 		case 0:
 			v = sv.ToInt(0) + sv.ToInt(1)
@@ -391,7 +391,7 @@ func TestSimpleCalculator(t *testing.T) {
 		return
 	}
 
-	parser.Grammar["Multitive"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	parser.Grammar["Multitive"].Action = func(sv *Values, d Any) (v Any, err error) {
 		switch sv.Choice {
 		case 0:
 			v = sv.ToInt(0) * sv.ToInt(1)
@@ -401,7 +401,7 @@ func TestSimpleCalculator(t *testing.T) {
 		return
 	}
 
-	parser.Grammar["Number"].Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	parser.Grammar["Number"].Action = func(sv *Values, d Any) (v Any, err error) {
 		return strconv.Atoi(sv.S)
 	}
 
@@ -423,7 +423,7 @@ func TestCalculator(t *testing.T) {
 	NUMBER.Ope = Oom(Cls("0-9"))
 
 	// Setup actions
-	reduce := func(sv *SemanticValues, dt Any) (Any, error) {
+	reduce := func(sv *Values, d Any) (Any, error) {
 		ret := sv.ToInt(0)
 		for i := 1; i < len(sv.Vs); i += 2 {
 			num := sv.ToInt(i + 1)
@@ -444,9 +444,9 @@ func TestCalculator(t *testing.T) {
 
 	EXPRESSION.Action = reduce
 	TERM.Action = reduce
-	TERM_OPERATOR.Action = func(sv *SemanticValues, dt Any) (v Any, err error) { return sv.S, nil }
-	FACTOR_OPERATOR.Action = func(sv *SemanticValues, dt Any) (v Any, err error) { return sv.S, nil }
-	NUMBER.Action = func(sv *SemanticValues, dt Any) (v Any, err error) { return strconv.Atoi(sv.S) }
+	TERM_OPERATOR.Action = func(sv *Values, d Any) (v Any, err error) { return sv.S, nil }
+	FACTOR_OPERATOR.Action = func(sv *Values, d Any) (v Any, err error) { return sv.S, nil }
+	NUMBER.Action = func(sv *Values, d Any) (v Any, err error) { return strconv.Atoi(sv.S) }
 
 	// Parse
 	_, val, err := EXPRESSION.Parse("1+2*3*(4-5+6)/7-8", nil)
@@ -467,7 +467,7 @@ func TestCalculator2(t *testing.T) {
     `)
 
 	// Setup actions
-	reduce := func(sv *SemanticValues, dt Any) (Any, error) {
+	reduce := func(sv *Values, d Any) (Any, error) {
 		ret := sv.ToInt(0)
 		for i := 1; i < len(sv.Vs); i += 2 {
 			num := sv.ToInt(i + 1)
@@ -489,9 +489,9 @@ func TestCalculator2(t *testing.T) {
 	g := parser.Grammar
 	g["EXPRESSION"].Action = reduce
 	g["TERM"].Action = reduce
-	g["TERM_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return sv.S, nil }
-	g["FACTOR_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return sv.S, nil }
-	g["NUMBER"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return strconv.Atoi(sv.S) }
+	g["TERM_OPERATOR"].Action = func(sv *Values, d Any) (Any, error) { return sv.S, nil }
+	g["FACTOR_OPERATOR"].Action = func(sv *Values, d Any) (Any, error) { return sv.S, nil }
+	g["NUMBER"].Action = func(sv *Values, d Any) (Any, error) { return strconv.Atoi(sv.S) }
 
 	// Parse
 	val, err := parser.ParseAndGetValue("1+2*3*(4-5+6)/7-8", nil)
@@ -716,7 +716,7 @@ func TestLeftUserRule(t *testing.T) {
 	syntax := " ROOT <- _ 'Hello' _ NAME '!' _ "
 
 	rules := map[string]operator{
-		"NAME": Usr(func(s string, sv *SemanticValues, dt Any) int {
+		"NAME": Usr(func(s string, sv *Values, d Any) int {
 			names := []string{"PEG", "BNF"}
 			for _, name := range names {
 				if len(name) <= len(s) && name == s[:len(name)] {
@@ -736,7 +736,7 @@ func TestLeftUserRule(t *testing.T) {
 func TestSemanticPredicate(t *testing.T) {
 	parser, _ := NewParser("NUMBER  <-  [0-9]+")
 
-	parser.Grammar["NUMBER"].Action = func(sv *SemanticValues, dt Any) (val Any, err error) {
+	parser.Grammar["NUMBER"].Action = func(sv *Values, d Any) (val Any, err error) {
 		val, _ = strconv.Atoi(sv.S)
 		if val != 100 {
 			err = errors.New("value error!!")

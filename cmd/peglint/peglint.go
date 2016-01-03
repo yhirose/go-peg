@@ -52,7 +52,7 @@ func SetupTracer(p *peg.Parser) {
 
 	level := 0
 	prevPos := 0
-	p.TracerBegin = func(name string, s string, sv *peg.SemanticValues, dt peg.Any, p int) {
+	p.TracerBegin = func(name string, s string, v *peg.Values, d peg.Any, p int) {
 		var backtrack string
 		if p < prevPos {
 			backtrack = "*"
@@ -61,7 +61,7 @@ func SetupTracer(p *peg.Parser) {
 		prevPos = p
 		level++
 	}
-	p.TracerEnd = func(name string, s string, sv *peg.SemanticValues, dt peg.Any, l int) {
+	p.TracerEnd = func(name string, s string, v *peg.Values, d peg.Any, l int) {
 		level--
 	}
 }

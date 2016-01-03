@@ -9,9 +9,9 @@ type Cases []struct {
 
 func run(name string, t *testing.T, ope operator, cases Cases) {
 	for _, cs := range cases {
-		sv := &SemanticValues{}
+		v := &Values{}
 		c := &context{}
-		if got := ope.parse(cs.input, sv, c, nil); got != cs.want {
+		if got := ope.parse(cs.input, v, c, nil); got != cs.want {
 			t.Errorf("[%s] input:%q want:%d got:%d", name, cs.input, cs.want, got)
 		}
 	}
@@ -158,18 +158,18 @@ func TestCharacterClass(t *testing.T) {
 
 func TestTokenBoundary(t *testing.T) {
 	ope := Seq(Tok(Lit("hello")), Lit(" "))
-	sv := &SemanticValues{}
+	v := &Values{}
 	c := &context{}
 	input := "hello "
 
 	want := len(input)
-	if got := ope.parse(input, sv, c, nil); got != want {
+	if got := ope.parse(input, v, c, nil); got != want {
 		t.Errorf("[%s] input:%q want:%d got:%d", "TokenBoundary", input, want, got)
 	}
 
 	tok := "hello"
-	if sv.isValidString == false || sv.S != tok {
-		t.Errorf("[%s] input:%q want:%d got:%d", "TokenBoundary", input, tok, sv.S)
+	if v.isValidString == false || v.S != tok {
+		t.Errorf("[%s] input:%q want:%d got:%d", "TokenBoundary", input, tok, v.S)
 	}
 }
 
@@ -180,12 +180,12 @@ func TestIgnore(t *testing.T) {
 
 	input := "123 "
 
-	NUMBER.Action = func(sv *SemanticValues, dt Any) (v Any, err error) {
+	NUMBER.Action = func(v *Values, d Any) (Any, error) {
 		n := 0
-		if len(sv.Vs) != n {
-			t.Errorf("[%s] input:%q want:%d got:%d", "Ignore", input, n, len(sv.Vs))
+		if len(v.Vs) != n {
+			t.Errorf("[%s] input:%q want:%d got:%d", "Ignore", input, n, len(v.Vs))
 		}
-		return
+		return nil, nil
 	}
 
 	want := len(input)

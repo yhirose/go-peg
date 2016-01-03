@@ -8,29 +8,29 @@ package main
 
 import (
 	"fmt"
-	. "github.com/yhirose/go-peg"
 	"strconv"
+	. "github.com/yhirose/go-peg"
 )
 
 func main() {
 	// Create a PEG parser
 	parser, _ := NewParser(`
-        # Grammar for simple calculator...
-        EXPRESSION       <-  TERM (TERM_OPERATOR TERM)*
-        TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
-        FACTOR           <-  NUMBER / '(' EXPRESSION ')'
-        TERM_OPERATOR    <-  [-+]
-        FACTOR_OPERATOR  <-  [/*]
-        NUMBER           <-  [0-9]+
+		# Grammar for simple calculator...
+		EXPRESSION       <-  TERM (TERM_OPERATOR TERM)*
+		TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
+		FACTOR           <-  NUMBER / '(' EXPRESSION ')'
+		TERM_OPERATOR    <-  [-+]
+		FACTOR_OPERATOR  <-  [/*]
+		NUMBER           <-  [0-9]+
 		%whitespace      <-  [ \t]*
-    `)
+	`)
 
 	// Setup actions
-	reduce := func(sv *SemanticValues, dt Any) (Any, error) {
-		val := sv.ToInt(0)
-		for i := 1; i < len(sv.Vs); i += 2 {
-			num := sv.ToInt(i + 1)
-			switch sv.ToStr(i) {
+	reduce := func(v *Values, d Any) (Any, error) {
+		val := v.ToInt(0)
+		for i := 1; i < len(v.Vs); i += 2 {
+			num := v.ToInt(i + 1)
+			switch v.ToStr(i) {
 			case "+":
 				val += num
 			case "-":
@@ -45,17 +45,20 @@ func main() {
 	}
 
 	g := parser.Grammar
-
 	g["EXPRESSION"].Action = reduce
 	g["TERM"].Action = reduce
-	g["TERM_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return sv.S, nil }
-	g["FACTOR_OPERATOR"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return sv.S, nil }
-	g["NUMBER"].Action = func(sv *SemanticValues, dt Any) (Any, error) { return strconv.Atoi(sv.S) }
+	g["TERM_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
+	g["FACTOR_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
+	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.S) }
 
 	// Parse
 	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
-	if val, err := parser.ParseAndGetValue(input, nil); err == nil {
-		fmt.Println(val) // -3
+	val, err := parser.ParseAndGetValue(input, nil)
+
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(val)
 	}
 }
 ```

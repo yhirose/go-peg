@@ -117,9 +117,7 @@ func (v *detectLeftRecursion) visitIgnore(ope *ignore)                 { ope.ope
 func (v *detectLeftRecursion) visitReference(ope *reference) {
 	if ope.name == v.name {
 		v.pos = ope.pos
-	} else if _, ok := v.refs[ope.name]; ok {
-
-	} else {
+	} else if _, ok := v.refs[ope.name]; !ok {
 		v.refs[ope.name] = true
 		ope.getRule().accept(v)
 	}

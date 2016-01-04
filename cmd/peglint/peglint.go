@@ -51,8 +51,8 @@ func SetupTracer(p *peg.Parser) {
 		return s
 	}
 
-	fmt.Fprintf(os.Stderr, "pos:lev\trule/ope")
-	fmt.Fprintf(os.Stderr, "-------\t--------")
+	fmt.Println("pos:lev\trule/ope")
+	fmt.Println("-------\t--------")
 
 	level := 0
 	prevPos := 0
@@ -62,7 +62,7 @@ func SetupTracer(p *peg.Parser) {
 		if p < prevPos {
 			backtrack = "*"
 		}
-		fmt.Fprintf(os.Stderr, "%d:%d%s\t%s%s\n", p, level, backtrack, indent(level), name)
+		fmt.Printf("%d:%d%s\t%s%s\n", p, level, backtrack, indent(level), name)
 		prevPos = p
 		level++
 	}

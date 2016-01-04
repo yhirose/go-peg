@@ -768,10 +768,7 @@ func TestJapaneseCharacter(t *testing.T) {
 }
 
 func match(t *testing.T, r *Rule, s string, want bool) {
-	l, _, err := r.Parse(s, &data{
-		grammar:    make(map[string]*Rule),
-		references: make(map[string]int),
-	})
+	l, _, err := r.Parse(s, newData())
 	ok := err == nil
 	if ok != want {
 		t.Errorf("syntax error: %d", l)

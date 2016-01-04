@@ -2,6 +2,8 @@ package peg_test
 
 import (
 	"fmt"
+	"strconv"
+
 	. "github.com/yhirose/go-peg"
 )
 
@@ -40,9 +42,9 @@ func Example() {
 	g := parser.Grammar
 	g["EXPRESSION"].Action = reduce
 	g["TERM"].Action = reduce
-	g["TERM_OPERATOR"].Action = ActionToStr
-	g["FACTOR_OPERATOR"].Action = ActionToStr
-	g["NUMBER"].Action = ActionToInt
+	g["TERM_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
+	g["FACTOR_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
+	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.S) }
 
 	// Parse
 	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
@@ -87,9 +89,9 @@ func Example_combinators() {
 
 	EXPRESSION.Action = reduce
 	TERM.Action = reduce
-	TERM_OPERATOR.Action = ActionToStr
-	FACTOR_OPERATOR.Action = ActionToStr
-	NUMBER.Action = ActionToInt
+	TERM_OPERATOR.Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
+	FACTOR_OPERATOR.Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
+	NUMBER.Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.S) }
 
 	// Parse
 	l, v, _ := EXPRESSION.Parse(" (1 + 2 * (3 + 4)) / 5 - 6 ", nil)
@@ -136,9 +138,9 @@ func Example_whitespace() {
 	g := parser.Grammar
 	g["EXPRESSION"].Action = reduce
 	g["TERM"].Action = reduce
-	g["TERM_OPERATOR"].Action = ActionToStr
-	g["FACTOR_OPERATOR"].Action = ActionToStr
-	g["NUMBER"].Action = ActionToInt
+	g["TERM_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
+	g["FACTOR_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
+	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.S) }
 
 	// Parse
 	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "

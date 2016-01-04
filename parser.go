@@ -17,6 +17,13 @@ type data struct {
 	duplicates []duplicate
 }
 
+func newData() *data {
+    return &data{
+        grammar:    make(map[string]*Rule),
+        references: make(map[string]int),
+    }
+}
+
 var rStart, rDefinition, rExpression,
 	rSequence, rPrefix, rSuffix, rPrimary,
 	rIdentifier, rIdentCont, rIdentStart, rIdentRest,
@@ -348,10 +355,7 @@ func NewParser(s string) (p *Parser, err *Error) {
 }
 
 func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err *Error) {
-	data := &data{
-		grammar:    make(map[string]*Rule),
-		references: make(map[string]int),
-	}
+	data := newData()
 
 	_, _, err = rStart.Parse(s, data)
 	if err != nil {

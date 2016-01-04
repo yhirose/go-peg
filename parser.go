@@ -346,8 +346,8 @@ func resolveEscapeSequence(s string) string {
 type Parser struct {
 	Grammar     map[string]*Rule
 	start       string
-	TracerEnter TracerEnter
-	TracerLeave TracerLeave
+	TracerEnter func(name string, s string, v *Values, d Any, p int)
+	TracerLeave func(name string, s string, v *Values, d Any, p int, l int)
 }
 
 func NewParser(s string) (p *Parser, err *Error) {

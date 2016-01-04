@@ -15,7 +15,6 @@ import (
 func main() {
 	// Create a PEG parser
 	parser, _ := NewParser(`
-		# Grammar for simple calculator...
 		EXPRESSION       <-  TERM (TERM_OPERATOR TERM)*
 		TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
 		FACTOR           <-  NUMBER / '(' EXPRESSION ')'
@@ -28,7 +27,7 @@ func main() {
 	// Setup actions
 	reduce := func(v *Values, d Any) (Any, error) {
 		val := v.ToInt(0)
-		for i := 1; i < len(v.Vs); i += 2 {
+		for i := 1; i < v.Len(); i += 2 {
 			num := v.ToInt(i + 1)
 			switch v.ToStr(i) {
 			case "+":
@@ -52,8 +51,7 @@ func main() {
 	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.S) }
 
 	// Parse
-	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
-	val, err := parser.ParseAndGetValue(input, nil)
+	val, err := parser.ParseAndGetValue(" 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 ", nil)
 
 	if err != nil {
 		fmt.Println(err)

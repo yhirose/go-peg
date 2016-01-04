@@ -96,8 +96,8 @@ type context struct {
 	inWhitespace  bool
 	inToken       bool
 
-	tracerEnter TracerEnter
-	tracerLeave TracerLeave
+	tracerEnter func(name string, s string, v *Values, d Any, p int)
+	tracerLeave func(name string, s string, v *Values, d Any, p int, l int)
 }
 
 func (c *context) setErrorPos(p int) {
@@ -371,7 +371,7 @@ type characterClass struct {
 
 func (o *characterClass) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
 	// TODO: UTF8 support
-	if len(s) - p < 1 {
+	if len(s)-p < 1 {
 		c.setErrorPos(p)
 		l = -1
 		return
@@ -409,7 +409,7 @@ type anyCharacter struct {
 
 func (o *anyCharacter) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
 	// TODO: UTF8 support
-	if len(s) - p < 1 {
+	if len(s)-p < 1 {
 		c.setErrorPos(p)
 		l = -1
 		return

@@ -9,7 +9,7 @@ type ErrorDetail struct {
 	Msg string
 }
 
-func (d ErrorDetail) Error() string {
+func (d ErrorDetail) String() string {
 	return fmt.Sprintf("%d:%d %s", d.Ln, d.Col, d.Msg)
 }
 
@@ -23,12 +23,6 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("%d:%d %s", d.Ln, d.Col, d.Msg)
 }
 
-// Tracer enter
-type TracerEnter func(name string, s string, v *Values, d Any, p int)
-
-// Tracer leave
-type TracerLeave func(name string, s string, v *Values, d Any, p int, l int)
-
 // Rule
 type Rule struct {
 	Name          string
@@ -39,8 +33,8 @@ type Rule struct {
 	Message       func() (message string)
 	Ignore        bool
 	WhitespaceOpe operator
-	TracerEnter   TracerEnter
-	TracerLeave   TracerLeave
+	TracerEnter   func(name string, s string, v *Values, d Any, p int)
+	TracerLeave   func(name string, s string, v *Values, d Any, p int, l int)
 
 	tokenChecker *tokenChecker
 }

@@ -27,7 +27,7 @@ func (e *Error) Error() string {
 type TracerEnter func(name string, s string, v *Values, d Any, p int)
 
 // Tracer leave
-type TracerLeave func(name string, s string, v *Values, d Any, l int)
+type TracerLeave func(name string, s string, v *Values, d Any, p int, l int)
 
 // Rule
 type Rule struct {
@@ -56,7 +56,7 @@ func (r *Rule) Parse(s string, d Any) (l int, val Any, err *Error) {
 		tracerLeave:   r.TracerLeave,
 	}
 
-	l = r.parse(s, v, c, d)
+	l = r.parse(s, 0, v, c, d)
 
 	if success(l) && len(v.Vs) > 0 && v.Vs[0].V != nil {
 		val = v.Vs[0].V
@@ -89,11 +89,11 @@ func (o *Rule) Label() string {
 	return fmt.Sprintf("[%s]", o.Name)
 }
 
-func (o *Rule) parse(s string, v *Values, c *context, d Any) int {
-	return parse(o, s, v, c, d)
+func (o *Rule) parse(s string, p int, v *Values, c *context, d Any) int {
+	return parse(o, s, p, v, c, d)
 }
 
-func (r *Rule) parseCore(s string, v *Values, c *context, d Any) int {
+func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 	if r.Enter != nil {
 		r.Enter(d)
 	}
@@ -123,31 +123,30 @@ func (r *Rule) parseCore(s string, v *Values, c *context, d Any) int {
 	var l int
 	if !c.inToken && r.isToken() {
 		c.inToken = true
-		l = ope.parse(s, chv, c, d)
+		l = ope.parse(s, p, chv, c, d)
 		c.inToken = false
 	} else {
-		l = ope.parse(s, chv, c, d)
+		l = ope.parse(s, p, chv, c, d)
 	}
 
 	// Invoke action
 	var val Any
-	tok := s[:]
+	var tok string
 
 	if success(l) {
 		if chv.isValidString {
 			tok = chv.S
 		} else {
-			tok = s[:l]
-			chv.S = s[:l]
-			chv.Pos = len(c.s) - len(s)
+			tok = s[p : p+l]
+			chv.S = s[p : p+l]
+			chv.Pos = p
 		}
 
 		if r.Action != nil {
 			var err error
 			if val, err = r.Action(chv, d); err != nil {
-				pos := len(c.s) - len(s)
-				if c.messagePos < pos {
-					c.messagePos = pos
+				if c.messagePos < p {
+					c.messagePos = p
 					c.message = err.Error()
 				}
 				l = -1
@@ -163,9 +162,8 @@ func (r *Rule) parseCore(s string, v *Values, c *context, d Any) int {
 		}
 	} else {
 		if r.Message != nil {
-			pos := len(c.s) - len(s)
-			if c.messagePos < pos {
-				c.messagePos = pos
+			if c.messagePos < p {
+				c.messagePos = p
 				c.message = r.Message()
 			}
 		}
@@ -216,6 +214,5 @@ func lineInfo(s string, curPos int) (ln int, col int) {
 	}
 
 	col = pos - colStartPos + 1
-
 	return
 }

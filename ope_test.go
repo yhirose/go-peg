@@ -11,7 +11,7 @@ func run(name string, t *testing.T, ope operator, cases Cases) {
 	for _, cs := range cases {
 		v := &Values{}
 		c := &context{}
-		if got := ope.parse(cs.input, v, c, nil); got != cs.want {
+		if got := ope.parse(cs.input, 0, v, c, nil); got != cs.want {
 			t.Errorf("[%s] input:%q want:%d got:%d", name, cs.input, cs.want, got)
 		}
 	}
@@ -163,7 +163,7 @@ func TestTokenBoundary(t *testing.T) {
 	input := "hello "
 
 	want := len(input)
-	if got := ope.parse(input, v, c, nil); got != want {
+	if got := ope.parse(input, 0, v, c, nil); got != want {
 		t.Errorf("[%s] input:%q want:%d got:%d", "TokenBoundary", input, want, got)
 	}
 

@@ -67,7 +67,7 @@ func SetupTracer(p *peg.Parser) {
 		level++
 	}
 
-	p.TracerLeave = func(name string, s string, v *peg.Values, d peg.Any, l int) {
+	p.TracerLeave = func(name string, s string, v *peg.Values, d peg.Any, p int, l int) {
 		level--
 	}
 }

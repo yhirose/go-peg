@@ -712,14 +712,14 @@ func TestLeftRecursiveWithEmptyString(t *testing.T) {
 	assert(t, err != nil)
 }
 
-func TestLeftUserRule(t *testing.T) {
+func TestUserRule(t *testing.T) {
 	syntax := " ROOT <- _ 'Hello' _ NAME '!' _ "
 
 	rules := map[string]operator{
-		"NAME": Usr(func(s string, sv *Values, d Any) int {
+		"NAME": Usr(func(s string, p int, sv *Values, d Any) int {
 			names := []string{"PEG", "BNF"}
 			for _, name := range names {
-				if len(name) <= len(s) && name == s[:len(name)] {
+				if len(name) <= len(s) - p && name == s[p:p+len(name)] {
 					return len(name)
 				}
 			}

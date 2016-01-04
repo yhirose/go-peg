@@ -18,10 +18,10 @@ type data struct {
 }
 
 func newData() *data {
-    return &data{
-        grammar:    make(map[string]*Rule),
-        references: make(map[string]int),
-    }
+	return &data{
+		grammar:    make(map[string]*Rule),
+		references: make(map[string]int),
+	}
 }
 
 var rStart, rDefinition, rExpression,

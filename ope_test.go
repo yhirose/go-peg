@@ -168,8 +168,8 @@ func TestTokenBoundary(t *testing.T) {
 	}
 
 	tok := "hello"
-	if v.isValidString == false || v.S != tok {
-		t.Errorf("[%s] input:%q want:%d got:%d", "TokenBoundary", input, tok, v.S)
+	if len(v.Ts) == 0 || v.Ts[0].S != tok {
+		t.Errorf("[%s] input:%q want:%s got:%s", "TokenBoundary", input, tok, v.Ts[0].S)
 	}
 }
 

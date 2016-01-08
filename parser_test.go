@@ -102,7 +102,7 @@ func TestStringCapture3(t *testing.T) {
 
 	var tags []string
 	parser.Grammar["TOKEN"].Action = func(sv *Values, d Any) (v Any, err error) {
-		tags = append(tags, sv.S)
+		tags = append(tags, sv.Token())
 		return
 	}
 
@@ -262,8 +262,8 @@ func TestWhitespace(t *testing.T) {
         ITEM         <-  WORD / PHRASE
 
         # Tokens
-        WORD         <-  [a-zA-Z0-9_]+
-        PHRASE       <-  '"' (!'"' .)* '"'
+        WORD         <-  < [a-zA-Z0-9_]+ >
+        PHRASE       <-  < '"' (!'"' .)* '"' >
 
         %whitespace  <-  [ \t\r\n]*
 	`)
@@ -285,7 +285,7 @@ func TestWhitespace2(t *testing.T) {
 
 	var items []string
 	parser.Grammar["ITEM"].Action = func(sv *Values, d Any) (v Any, err error) {
-		items = append(items, sv.S)
+		items = append(items, sv.Token())
 		return
 	}
 
@@ -315,7 +315,7 @@ func TestSkipToken(t *testing.T) {
 func TestSkipToken2(t *testing.T) {
 	parser, _ := NewParser(`
         ROOT        <-  ITEM (',' ITEM)*
-        ITEM        <-  ([a-z0-9])+
+        ITEM        <-  < ([a-z0-9])+ >
         %whitespace <-  [ \t]*
 	`)
 
@@ -719,7 +719,7 @@ func TestUserRule(t *testing.T) {
 		"NAME": Usr(func(s string, p int, sv *Values, d Any) int {
 			names := []string{"PEG", "BNF"}
 			for _, name := range names {
-				if len(name) <= len(s) - p && name == s[p:p+len(name)] {
+				if len(name) <= len(s)-p && name == s[p:p+len(name)] {
 					return len(name)
 				}
 			}

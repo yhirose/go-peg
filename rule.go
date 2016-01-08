@@ -50,7 +50,12 @@ func (r *Rule) Parse(s string, d Any) (l int, val Any, err *Error) {
 		tracerLeave:   r.TracerLeave,
 	}
 
-	l = r.parse(s, 0, v, c, d)
+	var ope operator = r
+	if r.WhitespaceOpe != nil {
+		ope = Seq(r.WhitespaceOpe, r) // Skip whitespace at beginning
+	}
+
+	l = ope.parse(s, 0, v, c, d)
 
 	if success(l) && len(v.Vs) > 0 && v.Vs[0] != nil {
 		val = v.Vs[0]
@@ -95,43 +100,14 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 	c.ruleStack.push(r)
 	chv := c.svStack.push()
 
-	// Setup whitespace operator if necessary
-	ope := r.Ope
-	if !c.inToken && c.whitespaceOpe != nil {
-		if c.ruleStack.size() == 1 {
-			if r.isToken() && !r.hasTokenBoundary() {
-				ope = Seq(c.whitespaceOpe, Tok(r.Ope))
-			} else {
-				ope = Seq(c.whitespaceOpe, r.Ope)
-			}
-		} else if r.isToken() {
-			if !r.hasTokenBoundary() {
-				ope = Seq(Tok(r.Ope), c.whitespaceOpe)
-			} else {
-				ope = Seq(r.Ope, c.whitespaceOpe)
-			}
-		}
-	}
-
-	// Parse
-	var l int
-	if !c.inToken && r.isToken() {
-		c.inToken = true
-		l = ope.parse(s, p, chv, c, d)
-		c.inToken = false
-	} else {
-		l = ope.parse(s, p, chv, c, d)
-	}
+	l := r.Ope.parse(s, p, chv, c, d)
 
 	// Invoke action
 	var val Any
 
 	if success(l) {
-		if chv.isValidString {
-		} else {
-			chv.S = s[p : p+l]
-			chv.Pos = p
-		}
+		chv.S = s[p : p+l]
+		chv.Pos = p
 
 		if r.Action != nil {
 			var err error

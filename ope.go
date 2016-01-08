@@ -14,14 +14,19 @@ func fail(l int) bool {
 type Any interface {
 }
 
+// Token
+type Token struct {
+	Pos int
+	S   string
+}
+
 // Semantic values
 type Values struct {
 	Vs     []Any
 	Pos    int
 	S      string
 	Choice int
-
-	isValidString bool
+	Ts     []Token
 }
 
 func (v *Values) Len() int {
@@ -38,6 +43,13 @@ func (v *Values) ToInt(i int) int {
 
 func (v *Values) ToOpe(i int) operator {
 	return v.Vs[i].(operator)
+}
+
+func (v *Values) Token() string {
+	if len(v.Ts) > 0 {
+		return v.Ts[0].S
+	}
+	return v.S
 }
 
 // Semantic values stack
@@ -88,7 +100,6 @@ type context struct {
 
 	whitespaceOpe operator
 	inWhitespace  bool
-	inToken       bool
 
 	tracerEnter func(name string, s string, v *Values, d Any, p int)
 	tracerLeave func(name string, s string, v *Values, d Any, p int, l int)
@@ -175,8 +186,10 @@ func (o *prioritizedChoice) parseCore(s string, p int, v *Values, c *context, d 
 			}
 			v.Pos = chv.Pos
 			v.S = chv.S
-			v.isValidString = chv.isValidString
 			v.Choice = id
+			if len(chv.Ts) > 0 {
+				v.Ts = append(v.Ts, chv.Ts...)
+			}
 			return
 		}
 		id++
@@ -200,11 +213,11 @@ func (o *zeroOrMore) parseCore(s string, p int, v *Values, c *context, d Any) (l
 	l = 0
 	for p+l < len(s) {
 		saveVs := v.Vs
+		saveTs := v.Ts
 		chl := o.ope.parse(s, p+l, v, c, d)
 		if fail(chl) {
-			if len(v.Vs) != len(saveVs) {
-				v.Vs = saveVs
-			}
+			v.Vs = saveVs
+			v.Ts = saveTs
 			c.errorPos = saveErrorPos
 			break
 		}
@@ -231,11 +244,11 @@ func (o *oneOrMore) parseCore(s string, p int, v *Values, c *context, d Any) (l 
 	saveErrorPos := c.errorPos
 	for p+l < len(s) {
 		saveVs := v.Vs
+		saveTs := v.Ts
 		chl := o.ope.parse(s, p+l, v, c, d)
 		if fail(chl) {
-			if len(v.Vs) != len(saveVs) {
-				v.Vs = saveVs
-			}
+			v.Vs = saveVs
+			v.Ts = saveTs
 			c.errorPos = saveErrorPos
 			break
 		}
@@ -257,11 +270,11 @@ type option struct {
 func (o *option) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
 	saveErrorPos := c.errorPos
 	saveVs := v.Vs
+	saveTs := v.Ts
 	l = o.ope.parse(s, p, v, c, d)
 	if fail(l) {
-		if len(v.Vs) != len(saveVs) {
-			v.Vs = saveVs
-		}
+		v.Vs = saveVs
+		v.Ts = saveTs
 		c.errorPos = saveErrorPos
 		l = 0
 	}
@@ -328,29 +341,24 @@ type literalString struct {
 	lit string
 }
 
-func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
-	l = 0
+func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any) int {
+	l := 0
 	for ; l < len(o.lit); l++ {
 		if p+l == len(s) || s[p+l] != o.lit[l] {
 			c.setErrorPos(p)
-			l = -1
-			return
+			return -1
 		}
 	}
 
 	// Skip whiltespace
-	if c.whitespaceOpe != nil && c.ruleStack.size() > 0 {
-		r := c.ruleStack.top()
-		if !r.isToken() {
-			len := c.whitespaceOpe.parse(s, p+l, v, c, d)
-			if fail(len) {
-				l = -1
-				return
-			}
-			l += len
+	if c.whitespaceOpe != nil {
+		len := c.whitespaceOpe.parse(s, p+l, v, c, d)
+		if fail(len) {
+			return -1
 		}
+		l += len
 	}
-	return
+	return l
 }
 
 func (o *literalString) accept(v visitor) {
@@ -422,14 +430,21 @@ type tokenBoundary struct {
 	ope operator
 }
 
-func (o *tokenBoundary) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
-	l = o.ope.parse(s, p, v, c, d)
+func (o *tokenBoundary) parseCore(s string, p int, v *Values, c *context, d Any) int {
+	l := o.ope.parse(s, p, v, c, d)
 	if success(l) {
-		v.Pos = p
-		v.S = s[p : p+l]
-		v.isValidString = true
+		v.Ts = append(v.Ts, Token{p, s[p : p+l]})
+
+		// Skip whiltespace
+		if c.whitespaceOpe != nil {
+			len := c.whitespaceOpe.parse(s, p+l, v, c, d)
+			if fail(len) {
+				return -1
+			}
+			l += len
+		}
 	}
-	return
+	return l
 }
 
 func (o *tokenBoundary) accept(v visitor) {
@@ -495,14 +510,15 @@ type whitespace struct {
 	ope operator
 }
 
-func (o *whitespace) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
+func (o *whitespace) parseCore(s string, p int, v *Values, c *context, d Any) int {
 	if c.inWhitespace {
 		return 0
+	} else {
+		c.inWhitespace = true
+		l := o.ope.parse(s, p, v, c, d)
+		c.inWhitespace = false
+		return l
 	}
-	c.inWhitespace = true
-	l = o.ope.parse(s, p, v, c, d)
-	c.inWhitespace = false
-	return
 }
 
 func (o *whitespace) accept(v visitor) {

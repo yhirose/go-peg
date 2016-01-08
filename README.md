@@ -8,8 +8,8 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	. "github.com/yhirose/go-peg"
+	"strconv"
 )
 
 func main() {
@@ -18,10 +18,10 @@ func main() {
 		EXPRESSION       <-  TERM (TERM_OPERATOR TERM)*
 		TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
 		FACTOR           <-  NUMBER / '(' EXPRESSION ')'
-		TERM_OPERATOR    <-  [-+]
-		FACTOR_OPERATOR  <-  [/*]
-		NUMBER           <-  [0-9]+
-		%whitespace      <-  [ \t]*
+		TERM_OPERATOR    <-  < [-+] >
+		FACTOR_OPERATOR  <-  < [/*] >
+		NUMBER           <-  < [0-9]+ >
+		%whitespace      <-  < [ \t]* >
 	`)
 
 	// Setup actions
@@ -46,9 +46,9 @@ func main() {
 	g := parser.Grammar
 	g["EXPRESSION"].Action = reduce
 	g["TERM"].Action = reduce
-	g["TERM_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
-	g["FACTOR_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
-	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.S) }
+	g["TERM_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.Ts[0].S, nil }
+	g["FACTOR_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.Ts[0].S, nil }
+	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.Ts[0].S) }
 
 	// Parse
 	val, err := parser.ParseAndGetValue(" 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 ", nil)

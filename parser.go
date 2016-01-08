@@ -216,11 +216,11 @@ func init() {
 	}
 
 	rLiteral.Action = func(v *Values, d Any) (Any, error) {
-		return Lit(resolveEscapeSequence(v.S)), nil
+		return Lit(resolveEscapeSequence(v.Ts[0].S)), nil
 	}
 
 	rClass.Action = func(v *Values, d Any) (Any, error) {
-		return Cls(resolveEscapeSequence(v.S)), nil
+		return Cls(resolveEscapeSequence(v.Ts[0].S)), nil
 	}
 
 	rAND.Action = func(v *Values, d Any) (Any, error) {

@@ -42,9 +42,9 @@ func Example() {
 	g := parser.Grammar
 	g["EXPRESSION"].Action = reduce
 	g["TERM"].Action = reduce
-	g["TERM_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
-	g["FACTOR_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
-	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.S) }
+	g["TERM_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
+	g["FACTOR_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
+	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.Token()) }
 
 	// Parse
 	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
@@ -89,9 +89,9 @@ func Example_combinators() {
 
 	EXPRESSION.Action = reduce
 	TERM.Action = reduce
-	TERM_OPERATOR.Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
-	FACTOR_OPERATOR.Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
-	NUMBER.Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.S) }
+	TERM_OPERATOR.Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
+	FACTOR_OPERATOR.Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
+	NUMBER.Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.Token()) }
 
 	// Parse
 	l, v, _ := EXPRESSION.Parse(" (1 + 2 * (3 + 4)) / 5 - 6 ", nil)
@@ -110,9 +110,9 @@ func Example_whitespace() {
         EXPRESSION       <-  TERM (TERM_OPERATOR TERM)*
         TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
         FACTOR           <-  NUMBER / '(' EXPRESSION ')'
-        TERM_OPERATOR    <-  [-+]
-        FACTOR_OPERATOR  <-  [/*]
-        NUMBER           <-  [0-9]+
+        TERM_OPERATOR    <-  < [-+] >
+        FACTOR_OPERATOR  <-  < [/*] >
+        NUMBER           <-  < [0-9]+ >
 		%whitespace      <-  [ \t]*
     `)
 
@@ -138,9 +138,9 @@ func Example_whitespace() {
 	g := parser.Grammar
 	g["EXPRESSION"].Action = reduce
 	g["TERM"].Action = reduce
-	g["TERM_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
-	g["FACTOR_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.S, nil }
-	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.S) }
+	g["TERM_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
+	g["FACTOR_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
+	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.Token()) }
 
 	// Parse
 	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "

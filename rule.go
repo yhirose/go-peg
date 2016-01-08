@@ -52,8 +52,8 @@ func (r *Rule) Parse(s string, d Any) (l int, val Any, err *Error) {
 
 	l = r.parse(s, 0, v, c, d)
 
-	if success(l) && len(v.Vs) > 0 && v.Vs[0].V != nil {
-		val = v.Vs[0].V
+	if success(l) && len(v.Vs) > 0 && v.Vs[0] != nil {
+		val = v.Vs[0]
 	}
 
 	if fail(l) || l != len(s) {
@@ -125,13 +125,10 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 
 	// Invoke action
 	var val Any
-	var tok string
 
 	if success(l) {
 		if chv.isValidString {
-			tok = chv.S
 		} else {
-			tok = s[p : p+l]
 			chv.S = s[p : p+l]
 			chv.Pos = p
 		}
@@ -146,13 +143,13 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 				l = -1
 			}
 		} else if len(chv.Vs) > 0 {
-			val = chv.Vs[0].V
+			val = chv.Vs[0]
 		}
 	}
 
 	if success(l) {
 		if r.Ignore == false {
-			v.Vs = append(v.Vs, Value{val, tok})
+			v.Vs = append(v.Vs, val)
 		}
 	} else {
 		if r.Message != nil {

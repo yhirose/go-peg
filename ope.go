@@ -14,15 +14,9 @@ func fail(l int) bool {
 type Any interface {
 }
 
-// Semantic value
-type Value struct {
-	V Any
-	S string
-}
-
 // Semantic values
 type Values struct {
-	Vs     []Value
+	Vs     []Any
 	Pos    int
 	S      string
 	Choice int
@@ -35,15 +29,15 @@ func (v *Values) Len() int {
 }
 
 func (v *Values) ToStr(i int) string {
-	return v.Vs[i].V.(string)
+	return v.Vs[i].(string)
 }
 
 func (v *Values) ToInt(i int) int {
-	return v.Vs[i].V.(int)
+	return v.Vs[i].(int)
 }
 
 func (v *Values) ToOpe(i int) operator {
-	return v.Vs[i].V.(operator)
+	return v.Vs[i].(operator)
 }
 
 // Semantic values stack

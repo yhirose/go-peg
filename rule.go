@@ -33,6 +33,7 @@ type Rule struct {
 	Message       func() (message string)
 	Ignore        bool
 	WhitespaceOpe operator
+	KeywordOpe    operator
 	TracerEnter   func(name string, s string, v *Values, d Any, p int)
 	TracerLeave   func(name string, s string, v *Values, d Any, p int, l int)
 
@@ -46,13 +47,14 @@ func (r *Rule) Parse(s string, d Any) (l int, val Any, err *Error) {
 		errorPos:      -1,
 		messagePos:    -1,
 		whitespaceOpe: r.WhitespaceOpe,
+		keywordOpe:    r.KeywordOpe,
 		tracerEnter:   r.TracerEnter,
 		tracerLeave:   r.TracerLeave,
 	}
 
 	var ope operator = r
 	if r.WhitespaceOpe != nil {
-		ope = Seq(r.WhitespaceOpe, r) // Skip whitespace at beginning
+		ope = Seq(Wsp(r.WhitespaceOpe), r) // Skip whitespace at beginning
 	}
 
 	l = ope.parse(s, 0, v, c, d)

@@ -2,6 +2,7 @@ package peg
 
 const (
 	WhitespceRuleName = "%whitespace"
+	KeywordRuleName   = "%keyword"
 )
 
 // PEG parser generator
@@ -431,7 +432,12 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 
 	// Automatic whitespace skipping
 	if r, ok := data.grammar[WhitespceRuleName]; ok {
-		data.grammar[data.start].WhitespaceOpe = Wsp(r)
+		data.grammar[data.start].WhitespaceOpe = r
+	}
+
+	// Automatic keyword boundary anchor check
+	if r, ok := data.grammar[KeywordRuleName]; ok {
+		data.grammar[data.start].KeywordOpe = r
 	}
 
 	p = &Parser{Grammar: data.grammar, start: data.start}

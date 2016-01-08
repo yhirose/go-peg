@@ -297,6 +297,20 @@ func TestWhitespace2(t *testing.T) {
 	assert(t, items[2] == "three")
 }
 
+func TestKeywordBounary(t *testing.T) {
+	parser, _ := NewParser(`
+        ROOT         <-  'hello' ','? 'world'
+        %whitespace  <-  [ \t\r\n]*
+        %keyword     <-  [a-z]+
+	`)
+
+	assert(t, parser.Parse(`helloworld`, nil) != nil)
+	assert(t, parser.Parse(`hello world`, nil) == nil)
+	assert(t, parser.Parse(`hello,world`, nil) == nil)
+	assert(t, parser.Parse(`hello, world`, nil) == nil)
+	assert(t, parser.Parse(`hello , world`, nil) == nil)
+}
+
 func TestSkipToken(t *testing.T) {
 	parser, _ := NewParser(`
         ROOT  <-  _ ITEM (',' _ ITEM _)*

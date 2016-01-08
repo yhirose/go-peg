@@ -101,6 +101,8 @@ type context struct {
 	whitespaceOpe operator
 	inWhitespace  bool
 
+	keywordOpe operator
+
 	tracerEnter func(name string, s string, v *Values, d Any, p int)
 	tracerLeave func(name string, s string, v *Values, d Any, p int, l int)
 }
@@ -350,9 +352,21 @@ func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any)
 		}
 	}
 
+	// Keyword boundary check
+	if c.keywordOpe != nil {
+		len := c.keywordOpe.parse(o.lit, 0, &Values{}, &context{}, nil)
+		if success(len) {
+			len = Npd(c.keywordOpe).parse(s, p+l, v, &context{}, nil)
+			if fail(len) {
+				return -1
+			}
+			l += len
+		}
+	}
+
 	// Skip whiltespace
 	if c.whitespaceOpe != nil {
-		len := c.whitespaceOpe.parse(s, p+l, v, c, d)
+		len := Wsp(c.whitespaceOpe).parse(s, p+l, v, c, d)
 		if fail(len) {
 			return -1
 		}

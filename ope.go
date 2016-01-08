@@ -1,6 +1,9 @@
 package peg
 
-import "reflect"
+import (
+	"reflect"
+	"sync"
+)
 
 func success(l int) bool {
 	return l != -1
@@ -340,7 +343,9 @@ func (o *notPredicate) accept(v visitor) {
 // Literal String
 type literalString struct {
 	opeBase
-	lit string
+	lit           string
+	initIsKeyword sync.Once
+	isKeyword     bool
 }
 
 func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any) int {
@@ -353,20 +358,23 @@ func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any)
 	}
 
 	// Keyword boundary check
-	if c.keywordOpe != nil {
-		len := c.keywordOpe.parse(o.lit, 0, &Values{}, &context{}, nil)
-		if success(len) {
-			len = Npd(c.keywordOpe).parse(s, p+l, v, &context{}, nil)
-			if fail(len) {
-				return -1
-			}
-			l += len
+	o.initIsKeyword.Do(func() {
+		if c.keywordOpe != nil {
+			len := c.keywordOpe.parse(o.lit, 0, &Values{}, &context{}, nil)
+			o.isKeyword = success(len)
 		}
+	})
+	if o.isKeyword {
+		len := Npd(c.keywordOpe).parse(s, p+l, v, &context{}, nil)
+		if fail(len) {
+			return -1
+		}
+		l += len
 	}
 
 	// Skip whiltespace
 	if c.whitespaceOpe != nil {
-		len := Wsp(c.whitespaceOpe).parse(s, p+l, v, c, d)
+		len := c.whitespaceOpe.parse(s, p+l, v, c, d)
 		if fail(len) {
 			return -1
 		}

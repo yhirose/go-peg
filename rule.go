@@ -54,7 +54,7 @@ func (r *Rule) Parse(s string, d Any) (l int, val Any, err *Error) {
 
 	var ope operator = r
 	if r.WhitespaceOpe != nil {
-		ope = Seq(Wsp(r.WhitespaceOpe), r) // Skip whitespace at beginning
+		ope = Seq(r.WhitespaceOpe, r) // Skip whitespace at beginning
 	}
 
 	l = ope.parse(s, 0, v, c, d)

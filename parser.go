@@ -432,7 +432,7 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 
 	// Automatic whitespace skipping
 	if r, ok := data.grammar[WhitespceRuleName]; ok {
-		data.grammar[data.start].WhitespaceOpe = r
+		data.grammar[data.start].WhitespaceOpe = Wsp(r)
 	}
 
 	// Automatic keyword boundary anchor check

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime/pprof"
 
 	"github.com/yhirose/go-peg"
 )
@@ -26,6 +27,7 @@ func usage() {
 var (
 	astFlag   = flag.Bool("ast", false, "show ast")
 	traceFlag = flag.Bool("trace", false, "show trace message")
+	profFlag  = flag.String("prof", "", "write cpu profile to file")
 )
 
 func check(err error) {
@@ -108,6 +110,13 @@ func main() {
 
 		if *astFlag {
 			peg.EnableAst(parser)
+		}
+
+		if *profFlag != "" {
+			f, err := os.Create(*profFlag)
+			check(err)
+			pprof.StartCPUProfile(f)
+			defer pprof.StopCPUProfile()
 		}
 
 		val, perr := parser.ParseAndGetValue(source, nil)

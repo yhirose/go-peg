@@ -9,9 +9,11 @@ import (
 	"github.com/yhirose/go-peg"
 )
 
-var usageMessage = `usage: peglint [--trace] [grammar file path] [source file path]
+var usageMessage = `usage: peglint [-ast] [-trace] [grammar file path] [source file path]
 
 peglint checks syntax of a given PEG grammar file and reports errors. If the check is successful and a user gives a source file for the grammar, it will also check syntax of the source file.
+
+The -ast flag prints the AST (abstract syntax tree) of the source file.
 
 The -trace flag can be used with the source file. It prints names of rules and operators that the PEG parser detects on standard error.
 `
@@ -22,7 +24,8 @@ func usage() {
 }
 
 var (
-	traceFlag = flag.Bool("trace", false, "trace mode")
+	astFlag   = flag.Bool("ast", false, "show ast")
+	traceFlag = flag.Bool("trace", false, "show trace message")
 )
 
 func check(err error) {
@@ -88,14 +91,31 @@ func main() {
 	pcheck(perr)
 
 	if len(args) >= 2 {
-		dat, err := ioutil.ReadFile(args[1])
+		path := args[1]
+
+		var err error
+		if path == "-" {
+			dat, err = ioutil.ReadAll(os.Stdin)
+		} else {
+			dat, err = ioutil.ReadFile(path)
+		}
 		check(err)
+		source := string(dat)
 
 		if *traceFlag {
 			SetupTracer(parser)
 		}
 
-		perr = parser.Parse(string(dat), nil)
+		if *astFlag {
+			peg.EnableAst(parser)
+		}
+
+		val, perr := parser.ParseAndGetValue(source, nil)
 		pcheck(perr)
+
+		if *astFlag {
+			ast := val.(*peg.Ast)
+			fmt.Println(peg.AstToS(ast, "", 0))
+		}
 	}
 }

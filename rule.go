@@ -100,7 +100,7 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 	}
 
 	c.ruleStack.push(r)
-	chv := c.svStack.push()
+	chv := c.push()
 
 	l := r.Ope.parse(s, p, chv, c, d)
 
@@ -138,7 +138,7 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 		}
 	}
 
-	c.svStack.pop()
+	c.pop()
 	c.ruleStack.pop()
 
 	if r.Leave != nil {

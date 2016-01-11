@@ -16,12 +16,14 @@ type data struct {
 	start      string
 	references map[string]int
 	duplicates []duplicate
+	options    map[string][]string
 }
 
 func newData() *data {
 	return &data{
 		grammar:    make(map[string]*Rule),
 		references: make(map[string]int),
+		options:    make(map[string][]string),
 	}
 }
 
@@ -31,11 +33,12 @@ var rStart, rDefinition, rExpression,
 	rLiteral, rClass, rRange, rChar,
 	rLEFTARROW, rSLASH, rAND, rNOT, rQUESTION, rSTAR, rPLUS, rOPEN, rCLOSE, rDOT,
 	rSpacing, rComment, rSpace, rEndOfLine, rEndOfFile, rBeginTok, rEndTok,
-	rIGNORE Rule
+	rIGNORE,
+	rOption, rOptionValue, rASSIGN Rule
 
 func init() {
 	// Setup PEG syntax parser
-	rStart.Ope = Seq(&rSpacing, Oom(&rDefinition), &rEndOfFile)
+	rStart.Ope = Seq(&rSpacing, Oom(&rDefinition), Opt(Seq(Lit("---"), &rSpacing, Oom(&rOption))), &rEndOfFile)
 	rDefinition.Ope = Seq(Opt(&rIGNORE), &rIdentifier, &rLEFTARROW, &rExpression)
 
 	rExpression.Ope = Seq(&rSequence, Zom(Seq(&rSLASH, &rSequence)))
@@ -85,10 +88,14 @@ func init() {
 	rEndOfLine.Ope = Cho(Lit("\r\n"), Lit("\n"), Lit("\r"))
 	rEndOfFile.Ope = Npd(Dot())
 
-	rBeginTok.Ope = Seq(Lit("<"), &rSpacing)
-	rEndTok.Ope = Seq(Lit(">"), &rSpacing)
+	rBeginTok.Ope = Seq(Cls("<"), &rSpacing)
+	rEndTok.Ope = Seq(Cls(">"), &rSpacing)
 
 	rIGNORE.Ope = Lit("~")
+
+	rOption.Ope = Seq(&rIdentifier, &rASSIGN, &rOptionValue)
+	rASSIGN.Ope = Seq(Lit("="), &rSpacing)
+	rOptionValue.Ope = Seq(Tok(Zom(Seq(Npd(&rEndOfLine), Dot()))), &rEndOfLine, &rSpacing)
 
 	// Setup actions
 	rDefinition.Action = func(v *Values, d Any) (val Any, err error) {
@@ -243,6 +250,17 @@ func init() {
 	rDOT.Action = func(v *Values, d Any) (Any, error) {
 		return Dot(), nil
 	}
+
+	rOption.Action = func(v *Values, d Any) (val Any, err error) {
+		options := d.(*data).options
+		optName := v.ToStr(0)
+		optVal := v.ToStr(2)
+		options[optName] = append(options[optName], optVal)
+		return
+	}
+	rOptionValue.Action = func(v *Values, d Any) (Any, error) {
+		return v.Token(), nil
+	}
 }
 
 func isHex(c byte) (v int, ok bool) {
@@ -346,6 +364,7 @@ func resolveEscapeSequence(s string) string {
 // Parser
 type Parser struct {
 	Grammar     map[string]*Rule
+	Options     map[string][]string
 	start       string
 	TracerEnter func(name string, s string, v *Values, d Any, p int)
 	TracerLeave func(name string, s string, v *Values, d Any, p int, l int)
@@ -440,7 +459,11 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 		data.grammar[data.start].KeywordOpe = r
 	}
 
-	p = &Parser{Grammar: data.grammar, start: data.start}
+	p = &Parser{
+		Grammar: data.grammar,
+		Options: data.options,
+		start:   data.start,
+	}
 	return
 }
 

@@ -25,6 +25,7 @@ type Token struct {
 
 // Semantic values
 type Values struct {
+	SS     string
 	Vs     []Any
 	Pos    int
 	S      string
@@ -53,20 +54,6 @@ func (v *Values) Token() string {
 		return v.Ts[0].S
 	}
 	return v.S
-}
-
-// Semantic values stack
-type semanticValuesStack struct {
-	vs []Values
-}
-
-func (s *semanticValuesStack) push() *Values {
-	s.vs = append(s.vs, Values{})
-	return &s.vs[len(s.vs)-1]
-}
-
-func (s *semanticValuesStack) pop() {
-	s.vs = s.vs[:len(s.vs)-1]
 }
 
 // Rule stack
@@ -98,8 +85,10 @@ type context struct {
 	messagePos int
 	message    string
 
-	svStack   semanticValuesStack
+	svStack   []Values
 	ruleStack ruleStack
+
+	inToken bool
 
 	whitespaceOpe operator
 	inWhitespace  bool
@@ -116,6 +105,17 @@ func (c *context) setErrorPos(p int) {
 	}
 }
 
+func (c *context) push() *Values {
+	v := Values{SS: c.s}
+	c.svStack = append(c.svStack, v)
+	return &c.svStack[len(c.svStack)-1]
+}
+
+func (c *context) pop() {
+	c.svStack = c.svStack[:len(c.svStack)-1]
+}
+
+// parse
 func parse(o operator, s string, p int, v *Values, c *context, d Any) (l int) {
 	if c.tracerEnter != nil {
 		c.tracerEnter(o.Label(), s, v, d, p)
@@ -182,9 +182,9 @@ type prioritizedChoice struct {
 func (o *prioritizedChoice) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
 	id := 0
 	for _, ope := range o.opes {
-		chv := c.svStack.push()
+		chv := c.push()
 		l = ope.parse(s, p, chv, c, d)
-		c.svStack.pop()
+		c.pop()
 		if success(l) {
 			if len(chv.Vs) > 0 {
 				v.Vs = append(v.Vs, chv.Vs...)
@@ -297,9 +297,9 @@ type andPredicate struct {
 }
 
 func (o *andPredicate) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
-	chv := c.svStack.push()
+	chv := c.push()
 	chl := o.ope.parse(s, p, chv, c, d)
-	c.svStack.pop()
+	c.pop()
 
 	if success(chl) {
 		l = 0
@@ -322,9 +322,9 @@ type notPredicate struct {
 func (o *notPredicate) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
 	saveErrorPos := c.errorPos
 
-	chv := c.svStack.push()
+	chv := c.push()
 	chl := o.ope.parse(s, p, chv, c, d)
-	c.svStack.pop()
+	c.pop()
 
 	if success(chl) {
 		c.setErrorPos(p)
@@ -360,12 +360,12 @@ func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any)
 	// Keyword boundary check
 	o.initIsKeyword.Do(func() {
 		if c.keywordOpe != nil {
-			len := c.keywordOpe.parse(o.lit, 0, &Values{}, &context{}, nil)
+			len := c.keywordOpe.parse(o.lit, 0, &Values{}, &context{s: s}, nil)
 			o.isKeyword = success(len)
 		}
 	})
 	if o.isKeyword {
-		len := Npd(c.keywordOpe).parse(s, p+l, v, &context{}, nil)
+		len := Npd(c.keywordOpe).parse(s, p+l, v, &context{s: s}, nil)
 		if fail(len) {
 			return -1
 		}
@@ -373,12 +373,14 @@ func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any)
 	}
 
 	// Skip whiltespace
-	if c.whitespaceOpe != nil {
-		len := c.whitespaceOpe.parse(s, p+l, v, c, d)
-		if fail(len) {
-			return -1
+	if c.inToken == false {
+		if c.whitespaceOpe != nil {
+			len := c.whitespaceOpe.parse(s, p+l, v, c, d)
+			if fail(len) {
+				return -1
+			}
+			l += len
 		}
-		l += len
 	}
 	return l
 }
@@ -453,7 +455,9 @@ type tokenBoundary struct {
 }
 
 func (o *tokenBoundary) parseCore(s string, p int, v *Values, c *context, d Any) int {
+	c.inToken = true
 	l := o.ope.parse(s, p, v, c, d)
+	c.inToken = false
 	if success(l) {
 		v.Ts = append(v.Ts, Token{p, s[p : p+l]})
 
@@ -480,9 +484,9 @@ type ignore struct {
 }
 
 func (o *ignore) parseCore(s string, p int, v *Values, c *context, d Any) int {
-	chv := c.svStack.push()
+	chv := c.push()
 	l := o.ope.parse(s, p, chv, c, d)
-	c.svStack.pop()
+	c.pop()
 	return l
 }
 

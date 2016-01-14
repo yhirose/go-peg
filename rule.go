@@ -23,11 +23,14 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("%d:%d %s", d.Ln, d.Col, d.Msg)
 }
 
+// Action
+type Action func(v *Values, d Any) (Any, error)
+
 // Rule
 type Rule struct {
 	Name          string
 	Ope           operator
-	Action        func(v *Values, d Any) (Any, error)
+	Action        Action
 	Enter         func(d Any)
 	Leave         func(d Any)
 	Message       func() (message string)

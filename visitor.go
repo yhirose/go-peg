@@ -18,6 +18,7 @@ type visitor interface {
 	visitReference(ope *reference)
 	visitRule(ope *Rule)
 	visitWhitespace(ope *whitespace)
+	visitExpression(ope *expression)
 }
 
 // visitorBase
@@ -40,6 +41,7 @@ func (v *visitorBase) visitUser(ope *user)                           {}
 func (v *visitorBase) visitReference(ope *reference)                 {}
 func (v *visitorBase) visitRule(ope *Rule)                           {}
 func (v *visitorBase) visitWhitespace(ope *whitespace)               {}
+func (v *visitorBase) visitExpression(ope *expression)               {}
 
 // tokenChecker
 type tokenChecker struct {
@@ -67,6 +69,7 @@ func (v *tokenChecker) visitTokenBoundary(ope *tokenBoundary) { v.hasTokenBounda
 func (v *tokenChecker) visitIgnore(ope *ignore)               { ope.ope.accept(v) }
 func (v *tokenChecker) visitReference(ope *reference)         { v.hasRule = true }
 func (v *tokenChecker) visitRule(ope *Rule)                   { v.hasRule = true }
+func (v *tokenChecker) visitExpression(ope *expression)       { v.hasRule = true }
 
 func (v *tokenChecker) isToken() bool {
 	return v.hasTokenBoundary || !v.hasRule

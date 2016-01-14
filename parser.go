@@ -364,7 +364,6 @@ func resolveEscapeSequence(s string) string {
 // Parser
 type Parser struct {
 	Grammar     map[string]*Rule
-	Options     map[string][]string
 	start       string
 	TracerEnter func(name string, s string, v *Values, d Any, p int)
 	TracerLeave func(name string, s string, v *Values, d Any, p int, l int)
@@ -461,9 +460,12 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 
 	p = &Parser{
 		Grammar: data.grammar,
-		Options: data.options,
 		start:   data.start,
 	}
+
+	// Expression rule
+	EnableExpressionParsing(p, data.options)
+
 	return
 }
 

@@ -172,7 +172,8 @@ func Example_expressionParsing() {
 		val := v.ToInt(0)
 		if v.Len() > 1 {
 			rhs := v.ToInt(2)
-			switch v.ToStr(1) {
+			ope := v.ToStr(1)
+			switch ope {
 			case "+":
 				val += rhs
 			case "-":

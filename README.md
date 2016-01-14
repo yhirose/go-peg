@@ -7,40 +7,44 @@ Yet another [PEG](http://en.wikipedia.org/wiki/Parsing_expression_grammar) (Pars
 // Create a PEG parser
 parser, _ := NewParser(`
     # Grammar for simple calculator...
-    EXPRESSION       <-  TERM (TERM_OPERATOR TERM)*
-    TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
-    FACTOR           <-  NUMBER / '(' EXPRESSION ')'
-    TERM_OPERATOR    <-  < [-+] >
-    FACTOR_OPERATOR  <-  < [/*] >
-    NUMBER           <-  < [0-9]+ >
-    %whitespace      <-  [ \t]*
+    EXPR         <-  ATOM (BINOP ATOM)*     # Use expression parsing option
+    ATOM         <-  NUMBER / '(' EXPR ')'
+    BINOP        <-  < [-+/*] >
+    NUMBER       <-  < [0-9]+ >
+    %whitespace  <-  [ \t]*
+    ---
+    # Expression parsing option
+    %expr  = EXPR   # Rule for expression parsing
+    %binop = L * /  # Precedence level 2
+    %binop = L + -  # Precedence level 1
 `)
 
 // Setup actions
-reduce := func(v *Values, d Any) (Any, error) {
+g := parser.Grammar
+g["EXPR"].Action = func(v *Values, d Any) (Any, error) {
     val := v.ToInt(0)
-    for i := 1; i < len(v.Vs); i += 2 {
-        num := v.ToInt(i + 1)
-        switch v.ToStr(i) {
-        case "+": val += num
-        case "-": val -= num
-        case "*": val *= num
-        case "/": val /= num
+    if v.Len() > 1 {
+        rhs := v.ToInt(2)
+        ope := v.ToStr(1)
+        switch ope {
+        case "+": val += rhs
+        case "-": val -= rhs
+        case "*": val *= rhs
+        case "/": val /= rhs
         }
     }
     return val, nil
 }
-
-g := parser.Grammar
-g["EXPRESSION"].Action = reduce
-g["TERM"].Action = reduce
-g["TERM_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
-g["FACTOR_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
-g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.Token()) }
+g["BINOP"].Action = func(v *Values, d Any) (Any, error) {
+    return v.Token(), nil
+}
+g["NUMBER"].Action = func(v *Values, d Any) (Any, error) {
+    return strconv.Atoi(v.Token())
+}
 
 // Parse
 input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
-val, err := parser.ParseAndGetValue(input, nil)
+val, _ := parser.ParseAndGetValue(input, nil)
 
 fmt.Println(val) // Output: -3
 ```

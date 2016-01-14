@@ -3,6 +3,16 @@ go-peg
 
 Yet another [PEG](http://en.wikipedia.org/wiki/Parsing_expression_grammar) (Parsing Expression Grammars) parser generator for Go.
 
+### Extended features
+
+ * Token operator: `<` `>`
+ * Automatic whitespace skipping: `%whitespace`
+ * Keyword boundary assertion: `%keyword`
+ * Expression parsing (precedence climbing)
+ * AST generation
+
+### Usage
+
 ```go
 // Create a PEG parser
 parser, _ := NewParser(`
@@ -19,13 +29,13 @@ parser, _ := NewParser(`
     %binop = L + -  # Precedence level 1
 `)
 
-// Setup actions
+// Setup semantic actions
 g := parser.Grammar
 g["EXPR"].Action = func(v *Values, d Any) (Any, error) {
     val := v.ToInt(0)
     if v.Len() > 1 {
-        rhs := v.ToInt(2)
         ope := v.ToStr(1)
+        rhs := v.ToInt(2)
         switch ope {
         case "+": val += rhs
         case "-": val -= rhs
@@ -52,7 +62,6 @@ fmt.Println(val) // Output: -3
 TODO
 ----
  * Memoization (Packrat parsing)
- * AST generation
 
 License
 -------

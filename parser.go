@@ -1,5 +1,7 @@
 package peg
 
+import "strings"
+
 const (
 	WhitespceRuleName = "%whitespace"
 	KeywordRuleName   = "%keyword"
@@ -118,6 +120,8 @@ func init() {
 			data.grammar[name] = &Rule{
 				Ope:    ope,
 				Name:   name,
+				SS:     v.SS,
+				Pos:    v.Pos,
 				Ignore: ignore,
 			}
 			if len(data.start) == 0 {
@@ -361,6 +365,45 @@ func resolveEscapeSequence(s string) string {
 	return string(b)
 }
 
+func getExpressionParsingOptions(options map[string][]string) (name string, info BinOpeInfo) {
+	name = ""
+	if vs, ok := options["%expr"]; ok {
+		name = vs[0]
+		// TODO: error handling
+	}
+
+	info = make(BinOpeInfo)
+	if vs, ok := options["%binop"]; ok {
+		level := len(vs)
+		for _, s := range vs {
+			flds := strings.Split(s, " ")
+			// TODO: error handling
+			assoc := assocNone
+			for i, fld := range flds {
+				switch i {
+				case 0:
+					switch fld {
+					case "L":
+						assoc = assocLeft
+					case "R":
+						assoc = assocRight
+					default:
+						// TODO: error handling
+					}
+				default:
+					info[fld] = struct {
+						level int
+						assoc int
+					}{level, assoc}
+				}
+			}
+			level--
+		}
+	}
+
+	return
+}
+
 // Parser
 type Parser struct {
 	Grammar     map[string]*Rule
@@ -463,8 +506,9 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 		start:   data.start,
 	}
 
-	// Expression rule
-	EnableExpressionParsing(p, data.options)
+	// Setup expression parsing
+	name, info := getExpressionParsingOptions(data.options)
+	err = EnableExpressionParsing(p, name, info)
 
 	return
 }

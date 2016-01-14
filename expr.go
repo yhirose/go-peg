@@ -1,10 +1,5 @@
 package peg
 
-import (
-	"errors"
-	"strings"
-)
-
 const (
 	assocNone = iota
 	assocLeft
@@ -124,45 +119,8 @@ func Exp(atom operator, binop operator, bopinf BinOpeInfo, action *Action) opera
 	return o
 }
 
-func EnableExpressionParsing(p *Parser, opt map[string][]string) error {
-	// Expression rule
-	exprRule := ""
-	if vs, ok := opt["%expr"]; ok {
-		exprRule = vs[0]
-		// TODO: error handling
-	}
-
-	// Binary operator info
-	binOpeInfo := make(BinOpeInfo)
-	if vs, ok := opt["%binop"]; ok {
-		level := len(vs)
-		for _, s := range vs {
-			flds := strings.Split(s, " ")
-			// TODO: error handling
-			assoc := assocNone
-			for i, fld := range flds {
-				switch i {
-				case 0:
-					switch fld {
-					case "L":
-						assoc = assocLeft
-					case "R":
-						assoc = assocRight
-					default:
-						// TODO: error handling
-					}
-				default:
-					binOpeInfo[fld] = struct {
-						level int
-						assoc int
-					}{level, assoc}
-				}
-			}
-			level--
-		}
-	}
-
-	if r, ok := p.Grammar[exprRule]; ok {
+func EnableExpressionParsing(p *Parser, name string, bopinf BinOpeInfo) *Error {
+	if r, ok := p.Grammar[name]; ok {
 		seq := r.Ope.(*sequence)
 		atom := seq.opes[0].(*reference)
 		opes := seq.opes[1].(*zeroOrMore).ope.(*sequence).opes
@@ -170,11 +128,14 @@ func EnableExpressionParsing(p *Parser, opt map[string][]string) error {
 		binop := opes[0].(*reference)
 
 		if atom.name != atom1.name {
-			return errors.New("expression syntax error")
+			err := &Error{}
+			ln, col := lineInfo(r.SS, r.Pos)
+			msg := "expression syntax error"
+			err.Details = append(err.Details, ErrorDetail{ln, col, msg})
+			return err
 		}
 
-		r.Ope = Exp(atom, binop, binOpeInfo, &r.Action)
+		r.Ope = Exp(atom, binop, bopinf, &r.Action)
 	}
-
 	return nil
 }

@@ -29,6 +29,8 @@ type Action func(v *Values, d Any) (Any, error)
 // Rule
 type Rule struct {
 	Name          string
+	SS            string
+	Pos           int
 	Ope           operator
 	Action        Action
 	Enter         func(d Any)

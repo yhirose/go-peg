@@ -5,6 +5,8 @@ import "strings"
 const (
 	WhitespceRuleName = "%whitespace"
 	KeywordRuleName   = "%keyword"
+	OptExpressionRule = "%expr"
+	OptBinaryOperator = "%binop"
 )
 
 // PEG parser generator
@@ -367,13 +369,13 @@ func resolveEscapeSequence(s string) string {
 
 func getExpressionParsingOptions(options map[string][]string) (name string, info BinOpeInfo) {
 	name = ""
-	if vs, ok := options["%expr"]; ok {
+	if vs, ok := options[OptExpressionRule]; ok {
 		name = vs[0]
 		// TODO: error handling
 	}
 
 	info = make(BinOpeInfo)
-	if vs, ok := options["%binop"]; ok {
+	if vs, ok := options[OptBinaryOperator]; ok {
 		level := len(vs)
 		for _, s := range vs {
 			flds := strings.Split(s, " ")

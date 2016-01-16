@@ -186,15 +186,11 @@ func (o *prioritizedChoice) parseCore(s string, p int, v *Values, c *context, d 
 		l = ope.parse(s, p, chv, c, d)
 		c.pop()
 		if success(l) {
-			if len(chv.Vs) > 0 {
-				v.Vs = append(v.Vs, chv.Vs...)
-			}
+			v.Vs = append(v.Vs, chv.Vs...)
 			v.Pos = chv.Pos
 			v.S = chv.S
 			v.Choice = id
-			if len(chv.Ts) > 0 {
-				v.Ts = append(v.Ts, chv.Ts...)
-			}
+			v.Ts = append(v.Ts, chv.Ts...)
 			return
 		}
 		id++

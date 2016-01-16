@@ -29,12 +29,14 @@ func (o *expression) parseExpr(s string, p int, v *Values, c *context, d Any, mi
 	var tok string
 	r := o.binop.(*reference).getRule().(*Rule)
 	action := r.Action
-	o.binop.(*reference).getRule().(*Rule).Action = func(v *Values, d Any) (Any, error) {
+	o.binop.(*reference).getRule().(*Rule).Action = func(v *Values, d Any) (val Any, err error) {
 		if action != nil {
 			tok = v.Token()
-			return action(v, d)
+			val, err = action(v, d)
+		} else if len(v.Vs) > 0 {
+			val = v.Vs[0]
 		}
-		return v.Vs[0], nil
+		return val, err
 	}
 	defer func() { r.Action = action }()
 

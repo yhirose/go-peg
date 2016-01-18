@@ -376,7 +376,7 @@ func getExpressionParsingOptions(options map[string][]string) (name string, info
 
 	info = make(BinOpeInfo)
 	if vs, ok := options[OptBinaryOperator]; ok {
-		level := len(vs)
+		level := 1
 		for _, s := range vs {
 			flds := strings.Split(s, " ")
 			// TODO: error handling
@@ -399,7 +399,7 @@ func getExpressionParsingOptions(options map[string][]string) (name string, info
 					}{level, assoc}
 				}
 			}
-			level--
+			level++
 		}
 	}
 

@@ -12,7 +12,11 @@ type Ast struct {
 	Parent *Ast
 }
 
-func AstToS(ast *Ast, s string, level int) string {
+func (ast *Ast) String() string {
+	return astToS(ast, "", 0)
+}
+
+func astToS(ast *Ast, s string, level int) string {
 	for i := 0; i < level; i++ {
 		s = s + "  "
 	}
@@ -22,7 +26,7 @@ func AstToS(ast *Ast, s string, level int) string {
 		s = s + "+ " + ast.Name + "\n"
 	}
 	for _, node := range ast.Nodes {
-		s = AstToS(node, s, level+1)
+		s = astToS(node, s, level+1)
 	}
 	return s
 }

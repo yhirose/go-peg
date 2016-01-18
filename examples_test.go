@@ -162,8 +162,8 @@ func Example_expressionParsing() {
 		---
         # Expression parsing
 		%expr  = EXPRESSION
-		%binop = L * /  # level 2
 		%binop = L + -  # level 1
+		%binop = L * /  # level 2
     `)
 
 	// Setup actions

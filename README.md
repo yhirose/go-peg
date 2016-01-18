@@ -25,8 +25,8 @@ parser, _ := NewParser(`
     ---
     # Expression parsing option
     %expr  = EXPR   # Rule for expression parsing
-    %binop = L * /  # Precedence level 2
     %binop = L + -  # Precedence level 1
+    %binop = L * /  # Precedence level 2
 `)
 
 // Setup semantic actions

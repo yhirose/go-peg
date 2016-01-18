@@ -124,7 +124,7 @@ func main() {
 
 		if *astFlag {
 			ast := val.(*peg.Ast)
-			fmt.Println(peg.AstToS(ast, "", 0))
+			fmt.Println(ast)
 		}
 	}
 }

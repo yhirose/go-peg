@@ -42,7 +42,8 @@ type Rule struct {
 	TracerEnter   func(name string, s string, v *Values, d Any, p int)
 	TracerLeave   func(name string, s string, v *Values, d Any, p int, l int)
 
-	tokenChecker *tokenChecker
+	tokenChecker  *tokenChecker
+	disableAction bool
 }
 
 func (r *Rule) Parse(s string, d Any) (l int, val Any, err *Error) {
@@ -116,7 +117,7 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 		chv.S = s[p : p+l]
 		chv.Pos = p
 
-		if r.Action != nil {
+		if r.Action != nil && !r.disableAction {
 			var err error
 			if val, err = r.Action(chv, d); err != nil {
 				if c.messagePos < p {

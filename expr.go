@@ -29,7 +29,7 @@ func (o *expression) parseExpr(s string, p int, v *Values, c *context, d Any, mi
 	var tok string
 	r := o.binop.(*reference).getRule().(*Rule)
 	action := r.Action
-	o.binop.(*reference).getRule().(*Rule).Action = func(v *Values, d Any) (val Any, err error) {
+	r.Action = func(v *Values, d Any) (val Any, err error) {
 		if action != nil {
 			tok = v.Token()
 			val, err = action(v, d)
@@ -138,6 +138,7 @@ func EnableExpressionParsing(p *Parser, name string, bopinf BinOpeInfo) *Error {
 		}
 
 		r.Ope = Exp(atom, binop, bopinf, &r.Action)
+		r.disableAction = true
 	}
 	return nil
 }

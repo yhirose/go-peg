@@ -514,6 +514,60 @@ func TestCalculator2(t *testing.T) {
 	assert(t, val == -3)
 }
 
+func TestCalculator3(t *testing.T) {
+	parser, _ := NewParser(`
+        # Grammar for simple calculator...
+        EXPRESSION   <-  ATOM (BINOP ATOM)*
+        ATOM         <-  NUMBER / '(' EXPRESSION ')'
+        BINOP        <-  < [-+/*] >
+        NUMBER       <-  < [0-9]+ >
+		%whitespace  <-  [ \t]*
+		---
+        # Expression parsing
+		%expr  = EXPRESSION # rule
+		%binop = L + -      # level 1
+		%binop = L * /      # level 2
+    `)
+
+	// Setup actions
+	g := parser.Grammar
+	g["EXPRESSION"].Action = func(v *Values, d Any) (Any, error) {
+		val := v.ToInt(0)
+		if v.Len() > 1 {
+			rhs := v.ToInt(2)
+			ope := v.ToStr(1)
+			switch ope {
+			case "+":
+				val += rhs
+			case "-":
+				val -= rhs
+			case "*":
+				val *= rhs
+			case "/":
+				val /= rhs
+			}
+		}
+		return val, nil
+	}
+	g["BINOP"].Action = func(v *Values, d Any) (Any, error) {
+		return v.Token(), nil
+	}
+	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) {
+		return strconv.Atoi(v.Token())
+	}
+
+	// Parse
+	val, err := parser.ParseAndGetValue("1+2*3*(4-5+6)/7-8", nil)
+
+	assert(t, err == nil)
+	assert(t, val == -3)
+
+	val, err = parser.ParseAndGetValue(" 1 + 1 + 1 ", nil)
+
+	assert(t, err == nil)
+	assert(t, val == 3)
+}
+
 /*
 TEST_CASE("Calculator test with AST", "[general]")
 {

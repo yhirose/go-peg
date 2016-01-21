@@ -38,7 +38,7 @@ var rStart, rDefinition, rExpression,
 	rLEFTARROW, rSLASH, rAND, rNOT, rQUESTION, rSTAR, rPLUS, rOPEN, rCLOSE, rDOT,
 	rSpacing, rComment, rSpace, rEndOfLine, rEndOfFile, rBeginTok, rEndTok,
 	rIGNORE,
-	rOption, rOptionValue, rASSIGN Rule
+	rOption, rOptionValue, rOptionComment, rASSIGN Rule
 
 func init() {
 	// Setup PEG syntax parser
@@ -99,7 +99,8 @@ func init() {
 
 	rOption.Ope = Seq(&rIdentifier, &rASSIGN, &rOptionValue)
 	rASSIGN.Ope = Seq(Lit("="), &rSpacing)
-	rOptionValue.Ope = Seq(Tok(Zom(Seq(Npd(&rEndOfLine), Dot()))), &rEndOfLine, &rSpacing)
+	rOptionComment.Ope = Seq(Zom(Cho(Lit(" "), Lit("\t"))), Cho(&rComment, &rEndOfLine))
+	rOptionValue.Ope = Seq(Tok(Zom(Seq(Npd(&rOptionComment), Dot()))), &rOptionComment, &rSpacing)
 
 	// Setup actions
 	rDefinition.Action = func(v *Values, d Any) (val Any, err error) {

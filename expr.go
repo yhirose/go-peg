@@ -30,8 +30,8 @@ func (o *expression) parseExpr(s string, p int, v *Values, c *context, d Any, mi
 	r := o.binop.(*reference).getRule().(*Rule)
 	action := r.Action
 	r.Action = func(v *Values, d Any) (val Any, err error) {
+		tok = v.Token()
 		if action != nil {
-			tok = v.Token()
 			val, err = action(v, d)
 		} else if len(v.Vs) > 0 {
 			val = v.Vs[0]

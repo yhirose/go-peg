@@ -9,7 +9,7 @@ import (
 
 func TestSimpleSyntax(t *testing.T) {
 	_, err := NewParser(`
-		ROOT <- _
+		ROOT ← _
 		_    <- ' '
 	`)
 	if err != nil {

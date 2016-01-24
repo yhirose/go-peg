@@ -74,7 +74,7 @@ func init() {
 		Seq(Lit("\\x"), Cls("0-9a-fA-F"), Opt(Cls("0-9a-fA-F"))),
 		Seq(Npd(Lit("\\")), Dot()))
 
-	rLEFTARROW.Ope = Seq(Lit("<-"), &rSpacing)
+	rLEFTARROW.Ope = Seq(Cho(Lit("<-"), Lit("←")), &rSpacing)
 	rSLASH.Ope = Seq(Lit("/"), &rSpacing)
 	rSLASH.Ignore = true
 	rAND.Ope = Seq(Lit("&"), &rSpacing)

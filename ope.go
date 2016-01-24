@@ -56,27 +56,6 @@ func (v *Values) Token() string {
 	return v.S
 }
 
-// Rule stack
-type ruleStack struct {
-	rules []*Rule
-}
-
-func (s *ruleStack) push(r *Rule) {
-	s.rules = append(s.rules, r)
-}
-
-func (s *ruleStack) pop() {
-	s.rules = s.rules[:len(s.rules)-1]
-}
-
-func (s *ruleStack) size() int {
-	return len(s.rules)
-}
-
-func (s *ruleStack) top() *Rule {
-	return s.rules[len(s.rules)-1]
-}
-
 // Context
 type context struct {
 	s string
@@ -85,8 +64,7 @@ type context struct {
 	messagePos int
 	message    string
 
-	svStack   []Values
-	ruleStack ruleStack
+	svStack []Values
 
 	inToken bool
 

@@ -105,7 +105,6 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 		r.Enter(d)
 	}
 
-	c.ruleStack.push(r)
 	chv := c.push()
 
 	l := r.Ope.parse(s, p, chv, c, d)
@@ -145,7 +144,6 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 	}
 
 	c.pop()
-	c.ruleStack.pop()
 
 	if r.Leave != nil {
 		r.Leave(d)

@@ -113,10 +113,10 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 	var val Any
 
 	if success(l) {
-		chv.S = s[p : p+l]
-		chv.Pos = p
-
 		if r.Action != nil && !r.disableAction {
+			chv.S = s[p : p+l]
+			chv.Pos = p
+
 			var err error
 			if val, err = r.Action(chv, d); err != nil {
 				if c.messagePos < p {

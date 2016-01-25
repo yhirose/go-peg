@@ -1,15 +1,20 @@
 package peg
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 type Ast struct {
 	//Path  string
 	Ln     int
 	Col    int
+	S      string
 	Name   string
 	Token  string
 	Nodes  []*Ast
 	Parent *Ast
+	Data   interface{}
 }
 
 func (ast *Ast) String() string {
@@ -21,9 +26,17 @@ func astToS(ast *Ast, s string, level int) string {
 		s = s + "  "
 	}
 	if len(ast.Token) > 0 {
-		s = s + "- " + ast.Name + " (" + strconv.Quote(ast.Token) + ")\n"
+		if ast.Data != nil {
+			s = fmt.Sprintf("%s- %s (%s) [%v]\n", s, ast.Name, strconv.Quote(ast.Token), ast.Data)
+		} else {
+			s = fmt.Sprintf("%s- %s (%s)\n", s, ast.Name, strconv.Quote(ast.Token))
+		}
 	} else {
-		s = s + "+ " + ast.Name + "\n"
+		if ast.Data != nil {
+			s = fmt.Sprintf("%s+ %s [%v]\n", s, ast.Name, ast.Data)
+		} else {
+			s = fmt.Sprintf("%s+ %s\n", s, ast.Name)
+		}
 	}
 	for _, node := range ast.Nodes {
 		s = astToS(node, s, level+1)
@@ -37,7 +50,7 @@ func EnableAst(p *Parser) (err error) {
 		if rule.isToken() {
 			rule.Action = func(v *Values, d Any) (Any, error) {
 				ln, col := lineInfo(v.SS, v.Pos)
-				ast := &Ast{Ln: ln, Col: col, Name: nm, Token: v.Token()}
+				ast := &Ast{Ln: ln, Col: col, S: v.S, Name: nm, Token: v.Token()}
 				return ast, nil
 			}
 		} else {
@@ -49,7 +62,7 @@ func EnableAst(p *Parser) (err error) {
 					nodes = append(nodes, val.(*Ast))
 				}
 
-				ast := &Ast{Ln: ln, Col: col, Name: nm, Nodes: nodes}
+				ast := &Ast{Ln: ln, Col: col, S: v.S, Name: nm, Nodes: nodes}
 				for _, node := range nodes {
 					node.Parent = ast
 				}

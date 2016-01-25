@@ -84,6 +84,9 @@ func (o *expression) parseExpr(s string, p int, v *Values, c *context, d Any, mi
 
 		var val Any
 		if *o.action != nil {
+			v.S = s[p : p+l]
+			v.Pos = p
+
 			var err error
 			if val, err = (*o.action)(v, d); err != nil {
 				if c.messagePos < p {

@@ -16,6 +16,8 @@ peglint checks syntax of a given PEG grammar file and reports errors. If the che
 
 The -ast flag prints the AST (abstract syntax tree) of the source file.
 
+The -opt flag prints the optimized AST (abstract syntax tree) of the source file.
+
 The -trace flag can be used with the source file. It prints names of rules and operators that the PEG parser detects on standard error.
 `
 
@@ -26,6 +28,7 @@ func usage() {
 
 var (
 	astFlag   = flag.Bool("ast", false, "show ast")
+	optFlag   = flag.Bool("opt", false, "show optimized ast")
 	traceFlag = flag.Bool("trace", false, "show trace message")
 	profFlag  = flag.String("prof", "", "write cpu profile to file")
 )
@@ -108,8 +111,8 @@ func main() {
 			SetupTracer(parser)
 		}
 
-		if *astFlag {
-			peg.EnableAst(parser)
+		if *astFlag || *optFlag {
+			parser.EnableAst()
 		}
 
 		if *profFlag != "" {
@@ -122,8 +125,12 @@ func main() {
 		val, perr := parser.ParseAndGetValue(source, nil)
 		pcheck(perr)
 
-		if *astFlag {
+		if *astFlag || *optFlag {
 			ast := val.(*peg.Ast)
+			if *optFlag {
+				opt := peg.NewAstOptimizer(nil)
+				ast = opt.Optimize(ast, nil)
+			}
 			fmt.Println(ast)
 		}
 	}

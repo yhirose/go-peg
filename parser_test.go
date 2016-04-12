@@ -362,22 +362,22 @@ TEST_CASE("Backtracking test", "[general]")
     REQUIRE(ret == true);
     REQUIRE(count == 1); // Skip second time
 }
+*/
 
-TEST_CASE("Backtracking with AST", "[general]")
-{
-    parser parser(R"(
+func TestBacktrackingWithAst(t *testing.T) {
+	parser, _ := NewParser(`
         S <- A? B (A B)* A
         A <- 'a'
         B <- 'b'
-    )");
+    `)
 
-    parser.enable_ast();
-    shared_ptr<Ast> ast;
-    bool ret = parser.parse("ba", ast);
-    REQUIRE(ret == true);
-    REQUIRE(ast->nodes.size() == 2);
+	parser.EnableAst()
+	val, err := parser.ParseAndGetValue("ba", nil)
+	ast := val.(*Ast)
+
+	assert(t, err == nil)
+	assert(t, len(ast.Nodes) == 2)
 }
-*/
 
 func TestOctalHexValue(t *testing.T) {
 	parser, _ := NewParser(`
@@ -568,160 +568,150 @@ func TestCalculator3(t *testing.T) {
 	assert(t, val == 3)
 }
 
-/*
-TEST_CASE("Calculator test with AST", "[general]")
-{
-    parser parser(
-        "  EXPRESSION       <-  _ TERM (TERM_OPERATOR TERM)*      "
-        "  TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*  "
-        "  FACTOR           <-  NUMBER / '(' _ EXPRESSION ')' _   "
-        "  TERM_OPERATOR    <-  < [-+] > _                        "
-        "  FACTOR_OPERATOR  <-  < [/*] > _                        "
-        "  NUMBER           <-  < [0-9]+ > _                      "
-        "  ~_               <-  [ \t\r\n]*                        "
-        );
+func TestCalculatorTestWithAST(t *testing.T) {
+	parser, _ := NewParser(`
+        EXPRESSION       <-  _ TERM (TERM_OPERATOR TERM)*
+        TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
+        FACTOR           <-  NUMBER / '(' _ EXPRESSION ')' _
+        TERM_OPERATOR    <-  < [-+] > _
+        FACTOR_OPERATOR  <-  < [/*] > _
+        NUMBER           <-  < [0-9]+ > _
+        ~_               <-  [ \t\r\n]*
+    `)
 
-    parser.enable_ast();
+	var eval func(ast *Ast) int
+	eval = func(ast *Ast) int {
+		if ast.Name == "NUMBER" {
+			val, _ := strconv.Atoi(ast.Token)
+			return val
+		} else {
+			nodes := ast.Nodes
+			result := eval(nodes[0])
+			for i := 1; i < len(nodes); i += 2 {
+				num := eval(nodes[i+1])
+				ope := nodes[i].Token[0]
+				switch ope {
+				case '+':
+					result += num
+					break
+				case '-':
+					result -= num
+					break
+				case '*':
+					result *= num
+					break
+				case '/':
+					result /= num
+					break
+				}
+			}
+			return result
+		}
+	}
 
-    function<long (const Ast&)> eval = [&](const Ast& ast) {
-        if (ast.name == "NUMBER") {
-            return stol(ast.token);
-        } else {
-            const auto& nodes = ast.nodes;
-            auto result = eval(*nodes[0]);
-            for (auto i = 1u; i < nodes.size(); i += 2) {
-                auto num = eval(*nodes[i + 1]);
-                auto ope = nodes[i]->token[0];
-                switch (ope) {
-                    case '+': result += num; break;
-                    case '-': result -= num; break;
-                    case '*': result *= num; break;
-                    case '/': result /= num; break;
-                }
-            }
-            return result;
-        }
-    };
+	parser.EnableAst()
+	val, err := parser.ParseAndGetValue("1+2*3*(4-5+6)/7-8", nil)
 
-    shared_ptr<Ast> ast;
-    auto ret = parser.parse("1+2*3*(4-5+6)/7-8", ast);
-    ast = peg::AstOptimizer(true).optimize(ast);
-    auto val = eval(*ast);
+	ast := val.(*Ast)
+	opt := NewAstOptimizer(nil)
+	ast = opt.Optimize(ast, nil)
+	ret := eval(ast)
 
-    REQUIRE(ret == true);
-    REQUIRE(val == -3);
+	assert(t, err == nil)
+	assert(t, ret == -3)
 }
 
-TEST_CASE("Ignore semantic value test", "[general]")
-{
-    parser parser(
-       " START <-  ~HELLO WORLD "
-       " HELLO <- 'Hello' _     "
-       " WORLD <- 'World' _     "
-       " _     <- [ \t\r\n]*    "
-    );
+func TestIgnoreSemanticValue(t *testing.T) {
+	parser, _ := NewParser(`
+		START <-  ~HELLO WORLD
+		HELLO <- 'Hello' _
+		WORLD <- 'World' _
+		_     <- [ \t\r\n]*
+    `)
 
-    parser.enable_ast();
+	parser.EnableAst()
+	ast, err := parser.ParseAndGetAst("Hello World", nil)
 
-    shared_ptr<Ast> ast;
-    auto ret = parser.parse("Hello World", ast);
-
-    REQUIRE(ret == true);
-    REQUIRE(ast->nodes.size() == 1);
-    REQUIRE(ast->nodes[0]->name == "WORLD");
+	assert(t, err == nil)
+	assert(t, len(ast.Nodes) == 1)
+	assert(t, ast.Nodes[0].Name == "WORLD")
 }
 
-TEST_CASE("Ignore semantic value of 'or' predicate test", "[general]")
-{
-    parser parser(
-       " START       <- _ !DUMMY HELLO_WORLD '.' "
-       " HELLO_WORLD <- HELLO 'World' _          "
-       " HELLO       <- 'Hello' _                "
-       " DUMMY       <- 'dummy' _                "
-       " ~_          <- [ \t\r\n]*               "
-    );
+func TestIgnoreSemanticValueOfORPredicate(t *testing.T) {
+	parser, _ := NewParser(`
+		START       <- _ !DUMMY HELLO_WORLD '.'
+		HELLO_WORLD <- HELLO 'World' _
+		HELLO       <- 'Hello' _
+		DUMMY       <- 'dummy' _
+		~_          <- [ \t\r\n]*
+    `)
 
-    parser.enable_ast();
+	parser.EnableAst()
+	ast, err := parser.ParseAndGetAst("Hello World.", nil)
 
-    shared_ptr<Ast> ast;
-    auto ret = parser.parse("Hello World.", ast);
-
-    REQUIRE(ret == true);
-    REQUIRE(ast->nodes.size() == 1);
-    REQUIRE(ast->nodes[0]->name == "HELLO_WORLD");
+	assert(t, err == nil)
+	assert(t, len(ast.Nodes) == 1)
+	assert(t, ast.Nodes[0].Name == "HELLO_WORLD")
 }
 
-TEST_CASE("Ignore semantic value of 'and' predicate test", "[general]")
-{
-    parser parser(
-       " START       <- _ &HELLO HELLO_WORLD '.' "
-       " HELLO_WORLD <- HELLO 'World' _          "
-       " HELLO       <- 'Hello' _                "
-       " ~_          <- [ \t\r\n]*               "
-    );
+func TestIgnoreSemanticValueOfANDPredicate(t *testing.T) {
+	parser, _ := NewParser(`
+		START       <- _ &HELLO HELLO_WORLD '.'
+		HELLO_WORLD <- HELLO 'World' _
+		HELLO       <- 'Hello' _
+		~_          <- [ \t\r\n]*
+    `)
 
-    parser.enable_ast();
+	parser.EnableAst()
+	ast, err := parser.ParseAndGetAst("Hello World.", nil)
 
-    shared_ptr<Ast> ast;
-    auto ret = parser.parse("Hello World.", ast);
-
-    REQUIRE(ret == true);
-    REQUIRE(ast->nodes.size() == 1);
-    REQUIRE(ast->nodes[0]->name == "HELLO_WORLD");
+	assert(t, err == nil)
+	assert(t, len(ast.Nodes) == 1)
+	assert(t, ast.Nodes[0].Name == "HELLO_WORLD")
 }
 
-TEST_CASE("Literal token on AST test1", "[general]")
-{
-    parser parser(R"(
+func TestLiteralTokenOnAst1(t *testing.T) {
+	parser, _ := NewParser(`
         STRING_LITERAL  <- '"' (('\\"' / '\\t' / '\\n') / (!["] .))* '"'
-    )");
-    parser.enable_ast();
+    `)
 
-    shared_ptr<Ast> ast;
-    auto ret = parser.parse(R"("a\tb")", ast);
+	parser.EnableAst()
+	ast, err := parser.ParseAndGetAst(`"a\tb"`, nil)
 
-    REQUIRE(ret == true);
-    REQUIRE(ast->is_token == true);
-    REQUIRE(ast->token == R"("a\tb")");
-    REQUIRE(ast->nodes.empty());
+	assert(t, err == nil)
+	assert(t, ast.Token == `"a\tb"`)
+	assert(t, len(ast.Nodes) == 0)
 }
 
-TEST_CASE("Literal token on AST test2", "[general]")
-{
-    parser parser(R"(
+func TestLiteralTokenOnAst2(t *testing.T) {
+	parser, _ := NewParser(`
         STRING_LITERAL  <-  '"' (ESC / CHAR)* '"'
         ESC             <-  ('\\"' / '\\t' / '\\n')
         CHAR            <-  (!["] .)
-    )");
-    parser.enable_ast();
+    `)
 
-    shared_ptr<Ast> ast;
-    auto ret = parser.parse(R"("a\tb")", ast);
+	parser.EnableAst()
+	ast, err := parser.ParseAndGetAst(`"a\tb"`, nil)
 
-    REQUIRE(ret == true);
-    REQUIRE(ast->is_token == false);
-    REQUIRE(ast->token.empty());
-    REQUIRE(ast->nodes.size() == 3);
+	assert(t, err == nil)
+	assert(t, ast.Token == "")
+	assert(t, len(ast.Nodes) == 3)
 }
 
-TEST_CASE("Literal token on AST test3", "[general]")
-{
-    parser parser(R"(
+func TestLiteralTokenOnAst3(t *testing.T) {
+	parser, _ := NewParser(`
         STRING_LITERAL  <-  < '"' (ESC / CHAR)* '"' >
         ESC             <-  ('\\"' / '\\t' / '\\n')
         CHAR            <-  (!["] .)
-    )");
-    parser.enable_ast();
+    `)
 
-    shared_ptr<Ast> ast;
-    auto ret = parser.parse(R"("a\tb")", ast);
+	parser.EnableAst()
+	ast, err := parser.ParseAndGetAst(`"a\tb"`, nil)
 
-    REQUIRE(ret == true);
-    REQUIRE(ast->is_token == true);
-    REQUIRE(ast->token == R"("a\tb")");
-    REQUIRE(ast->nodes.empty());
+	assert(t, err == nil)
+	assert(t, ast.Token == `"a\tb"`)
+	assert(t, len(ast.Nodes) == 0)
 }
-*/
 
 func TestMissingDefinitions(t *testing.T) {
 	parser, err := NewParser(`

@@ -44,7 +44,7 @@ func astToS(ast *Ast, s string, level int) string {
 	return s
 }
 
-func EnableAst(p *Parser) (err error) {
+func (p *Parser) EnableAst() (err error) {
 	for name, rule := range p.Grammar {
 		nm := name
 		if rule.isToken() {
@@ -73,4 +73,48 @@ func EnableAst(p *Parser) (err error) {
 	}
 
 	return err
+}
+
+func (p *Parser) ParseAndGetAst(s string, d Any) (ast *Ast, err *Error) {
+	if val, err := p.ParseAndGetValue(s, d); err == nil {
+		ast = val.(*Ast)
+	}
+	return
+}
+
+type AstOptimizer struct {
+	exceptions []string
+}
+
+func NewAstOptimizer(exceptions []string) *AstOptimizer {
+	return &AstOptimizer{exceptions}
+}
+
+func (o *AstOptimizer) Optimize(org *Ast, par *Ast) *Ast {
+	opt := true
+	for _, name := range o.exceptions {
+		if name == org.Name {
+			opt = false
+		}
+	}
+
+	if opt && len(org.Nodes) == 1 {
+		chl := o.Optimize(org.Nodes[0], par)
+		return chl
+	}
+
+	ast := &Ast{
+		Ln:     org.Ln,
+		Col:    org.Col,
+		S:      org.S,
+		Name:   org.Name,
+		Token:  org.Token,
+		Parent: par,
+		Data:   org.Data,
+	}
+	for _, node := range org.Nodes {
+		chl := o.Optimize(node, ast)
+		ast.Nodes = append(ast.Nodes, chl)
+	}
+	return ast
 }

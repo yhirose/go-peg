@@ -27,7 +27,7 @@ func (o *expression) parseExpr(s string, p int, v *Values, c *context, d Any, mi
 	}
 
 	var tok string
-	r := o.binop.(*reference).getRule().(*Rule)
+	r := o.binop.(*reference).rule
 	action := r.Action
 	r.Action = func(v *Values, d Any) (val Any, err error) {
 		tok = v.Token()

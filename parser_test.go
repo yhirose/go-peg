@@ -825,6 +825,204 @@ func TestJapaneseCharacter(t *testing.T) {
 	assert(t, parser.Parse("サーバーを復旧します。", nil) == nil)
 }
 
+func TestMacroSimple(t *testing.T) {
+	parser, err := NewParser(`
+		S     <- HELLO WORLD
+		HELLO <- T('hello')
+		WORLD <- T('world')
+		T(a)  <- a [ \t]*
+	`)
+
+	assert(t, err == nil)
+	assert(t, parser.Parse("hello \tworld ", nil) == nil)
+}
+
+func TestMacroTwoParameters(t *testing.T) {
+	parser, err := NewParser(`
+		S           <- HELLO_WORLD
+		HELLO_WORLD <- T('hello', 'world')
+		T(a, b)     <- a [ \t]* b [ \t]*
+	`)
+
+	assert(t, err == nil)
+	assert(t, parser.Parse("hello \tworld ", nil) == nil)
+}
+
+func TestMacroSyntaxError(t *testing.T) {
+	_, err := NewParser(`
+		S     <- T('hello')
+		T (a) <- a [ \t]*
+	`)
+
+	assert(t, err != nil)
+}
+
+func TestMacroMissingArgument(t *testing.T) {
+	_, err := NewParser(`
+		S       <- T ('hello')
+		T(a, b) <- a [ \t]* b
+	`)
+
+	assert(t, err != nil)
+}
+
+func TestMacroReferenceSyntaxError(t *testing.T) {
+	_, err := NewParser(`
+		S    <- T ('hello')
+		T(a) <- a [ \t]*
+	`)
+
+	assert(t, err != nil)
+}
+
+func TestInvalidMacroReferenceError(t *testing.T) {
+	_, err := NewParser(`
+		S <- T('hello')
+		T <- 'world'
+	`)
+
+	assert(t, err != nil)
+}
+
+func TestMacroAction(t *testing.T) {
+	parser, err := NewParser(`
+		S     <- HELLO WORLD
+		HELLO <- T('hello')
+		WORLD <- T('world')
+		T(a)  <- < a > [ \t]*
+	`)
+
+	parser.Grammar["HELLO"].Action = func(sv *Values, d Any) (v Any, err error) {
+		assert(t, sv.ToStr(0) == "hello")
+		return
+	}
+
+	parser.Grammar["WORLD"].Action = func(sv *Values, d Any) (v Any, err error) {
+		assert(t, sv.ToStr(0) == "world")
+		return
+	}
+
+	parser.Grammar["T"].Action = func(sv *Values, d Any) (v Any, err error) {
+		v = sv.Token()
+		return
+	}
+
+	assert(t, err == nil)
+	assert(t, parser.Parse("hello \tworld ", nil) == nil)
+}
+
+func TestMacroCalculator(t *testing.T) {
+	// Create a PEG parser
+	parser, _ := NewParser(`
+        # Grammar for simple calculator...
+        EXPRESSION       <-  _ TERM (TERM_OPERATOR TERM)*
+        TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
+        FACTOR           <-  NUMBER / P('(') EXPRESSION P(')')
+        TERM_OPERATOR    <-  T([-+])
+        FACTOR_OPERATOR  <-  T([/*])
+        NUMBER           <-  T([0-9]+)
+		T(S)             <-  < S > _
+		~P(S)            <-  < S > _
+		~_               <-  [ \t]*
+    `)
+
+	// Setup actions
+	reduce := func(v *Values, d Any) (Any, error) {
+		val := v.ToInt(0)
+		for i := 1; i < len(v.Vs); i += 2 {
+			num := v.ToInt(i + 1)
+			switch v.ToStr(i) {
+			case "+":
+				val += num
+			case "-":
+				val -= num
+			case "*":
+				val *= num
+			case "/":
+				val /= num
+			}
+		}
+		return val, nil
+	}
+
+	g := parser.Grammar
+	g["EXPRESSION"].Action = reduce
+	g["TERM"].Action = reduce
+	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.ToStr(0)) }
+	g["T"].Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
+
+	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
+	val, err := parser.ParseAndGetValue(input, nil)
+
+	assert(t, err == nil)
+	assert(t, val == -3)
+}
+
+func TestMacroExpressionArguments(t *testing.T) {
+	parser, err := NewParser(`
+		S             <- M('hello' / 'Hello', 'world' / 'World')
+		M(arg0, arg1) <- arg0 [ \t]+ arg1
+	`)
+
+	assert(t, err == nil)
+	assert(t, parser.Parse("Hello world", nil) == nil)
+}
+
+func TestMacroRecursive(t *testing.T) {
+	parser, err := NewParser(`
+		S    <- M('abc')
+		M(s) <- !s / s ' ' M(s / '123') / s
+	`)
+
+	assert(t, err == nil)
+	assert(t, parser.Parse("", nil) == nil)
+	assert(t, parser.Parse("abc", nil) == nil)
+	assert(t, parser.Parse("abc abc", nil) == nil)
+	assert(t, parser.Parse("abc 123 abc", nil) == nil)
+}
+
+func testMacroRecursive2(t *testing.T, syntax string) {
+	parser, err := NewParser(syntax)
+	assert(t, err == nil)
+	assert(t, parser.Parse("abc abc-123", nil) == nil)
+}
+
+func TestMacroRecursive2(t *testing.T) {
+	syntaxes := []string{
+		`S <- M('abc') M(s) <- !s / s ' ' M(s* '-' '123') / s`,
+		`S <- M('abc') M(s) <- !s / s ' ' M(s+ '-' '123') / s`,
+		`S <- M('abc') M(s) <- !s / s ' ' M(s? '-' '123') / s`,
+		`S <- M('abc') M(s) <- !s / s ' ' M(&s s+ '-' '123') / s`,
+		`S <- M('abc') M(s) <- !s / s ' ' M(s '-' !s '123') / s`,
+		`S <- M('abc') M(s) <- !s / s ' ' M(< s > '-' '123') / s`,
+		`S <- M('abc') M(s) <- !s / s ' ' M(~s '-' '123') / s`,
+	}
+	for _, syntax := range syntaxes {
+		testMacroRecursive2(t, syntax)
+	}
+}
+
+func TestMacroExclusiveModifiers(t *testing.T) {
+	parser, err := NewParser(`
+		S                   <- Modifiers(!"") _
+		Modifiers(Appeared) <- (!Appeared) (
+								   Token('public') Modifiers(Appeared / 'public') /
+								   Token('static') Modifiers(Appeared / 'static') /
+								   Token('final') Modifiers(Appeared / 'final') /
+								   "")
+		Token(t)            <- t _
+		_                   <- [ \t\r\n]*
+	`)
+
+	assert(t, err == nil)
+	assert(t, parser.Parse("public", nil) == nil)
+	assert(t, parser.Parse("static", nil) == nil)
+	assert(t, parser.Parse("final", nil) == nil)
+	assert(t, parser.Parse("public static final", nil) == nil)
+	assert(t, parser.Parse("public public", nil) != nil)
+	assert(t, parser.Parse("public static public", nil) != nil)
+}
+
 func match(t *testing.T, r *Rule, s string, want bool) {
 	l, _, err := r.Parse(s, newData())
 	ok := err == nil
@@ -840,10 +1038,13 @@ func TestPegGrammar(t *testing.T) {
 func TestPegDefinition(t *testing.T) {
 	match(t, &rDefinition, "Definition <- a / (b c) / d ", true)
 	match(t, &rDefinition, "Definition <- a / b c / d ", true)
+	match(t, &rDefinition, "Definition ← a ", true)
 	match(t, &rDefinition, "Definition ", false)
 	match(t, &rDefinition, " ", false)
 	match(t, &rDefinition, "", false)
 	match(t, &rDefinition, "Definition = a / (b c) / d ", false)
+	match(t, &rDefinition, "Macro(param) <- a ", true)
+	match(t, &rDefinition, "Macro (param) <- a ", false)
 }
 
 func TestPegExpression(t *testing.T) {
@@ -868,7 +1069,7 @@ func TestPegPrefix(t *testing.T) {
 	match(t, &rPrefix, "![']", true)
 	match(t, &rPrefix, "-[']", false)
 	match(t, &rPrefix, "", false)
-	match(t, &rSequence, " a", false)
+	match(t, &rPrefix, " a", false)
 }
 
 func TestPegSuffix(t *testing.T) {
@@ -879,7 +1080,7 @@ func TestPegSuffix(t *testing.T) {
 	match(t, &rSuffix, ". + ", true)
 	match(t, &rSuffix, "?", false)
 	match(t, &rSuffix, "", false)
-	match(t, &rSequence, " a", false)
+	match(t, &rPrefix, " a", false)
 }
 
 func TestPegPrimary(t *testing.T) {

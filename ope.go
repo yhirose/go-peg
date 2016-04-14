@@ -45,6 +45,10 @@ func (v *Values) ToInt(i int) int {
 	return v.Vs[i].(int)
 }
 
+func (v *Values) ToBool(i int) bool {
+	return v.Vs[i].(bool)
+}
+
 func (v *Values) ToOpe(i int) operator {
 	return v.Vs[i].(operator)
 }
@@ -64,7 +68,8 @@ type context struct {
 	messagePos int
 	message    string
 
-	svStack []Values
+	svStack   []Values
+	argsStack [][]operator
 
 	inToken bool
 
@@ -91,6 +96,21 @@ func (c *context) push() *Values {
 
 func (c *context) pop() {
 	c.svStack = c.svStack[:len(c.svStack)-1]
+}
+
+func (c *context) pushArgs(args []operator) {
+	c.argsStack = append(c.argsStack, args)
+}
+
+func (c *context) popArgs() {
+	c.argsStack = c.argsStack[:len(c.argsStack)-1]
+}
+
+func (c *context) topArg() []operator {
+	if len(c.argsStack) == 0 {
+		return nil
+	}
+	return c.argsStack[len(c.argsStack)-1]
 }
 
 // parse
@@ -485,23 +505,45 @@ func (o *user) accept(v visitor) {
 // Reference
 type reference struct {
 	opeBase
-	grammar map[string]*Rule
-	name    string
-	pos     int
+	name  string
+	iarg  int
+	args  []operator
+	iargs []int
+	pos   int
+	rule  *Rule
 }
 
 func (o *reference) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
-	rule := o.getRule()
-	l = rule.parse(s, p, v, c, d)
+	if o.rule != nil {
+		// Rule
+		if o.rule.Parameters != nil {
+			vis := &findReference{
+				args:   c.topArg(),
+				params: o.rule.Parameters,
+			}
+
+			var args []operator
+			for _, arg := range o.args {
+				arg.accept(vis)
+				args = append(args, vis.ope)
+			}
+
+			c.pushArgs(args)
+			l = o.rule.parse(s, p, v, c, d)
+			c.popArgs()
+		} else {
+			l = o.rule.parse(s, p, v, c, d)
+		}
+	} else {
+		// Parameter
+		args := c.topArg()
+		l = args[o.iarg].parse(s, p, v, c, d)
+	}
 	return
 }
 
 func (o *reference) accept(v visitor) {
 	v.visitReference(o)
-}
-
-func (o *reference) getRule() operator {
-	return o.grammar[o.name] // TODO: fixup
 }
 
 // Whitespace
@@ -525,15 +567,21 @@ func (o *whitespace) accept(v visitor) {
 	v.visitWhitespace(o)
 }
 
-func Seq(opes ...operator) operator {
+func SeqCore(opes []operator) operator {
 	o := &sequence{opes: opes}
 	o.derived = o
 	return o
 }
-func Cho(opes ...operator) operator {
+func Seq(opes ...operator) operator {
+	return SeqCore(opes)
+}
+func ChoCore(opes []operator) operator {
 	o := &prioritizedChoice{opes: opes}
 	o.derived = o
 	return o
+}
+func Cho(opes ...operator) operator {
+	return ChoCore(opes)
 }
 func Zom(ope operator) operator {
 	o := &zeroOrMore{ope: ope}
@@ -590,8 +638,8 @@ func Usr(fn func(s string, p int, v *Values, d Any) int) operator {
 	o.derived = o
 	return o
 }
-func Ref(g map[string]*Rule, ident string, pos int) operator {
-	o := &reference{grammar: g, name: ident, pos: pos}
+func Ref(g map[string]*Rule, ident string, args []operator, pos int) operator {
+	o := &reference{name: ident, args: args, pos: pos}
 	o.derived = o
 	return o
 }

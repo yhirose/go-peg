@@ -18,16 +18,14 @@ type duplicate struct {
 type data struct {
 	grammar    map[string]*Rule
 	start      string
-	references map[string]int
 	duplicates []duplicate
 	options    map[string][]string
 }
 
 func newData() *data {
 	return &data{
-		grammar:    make(map[string]*Rule),
-		references: make(map[string]int),
-		options:    make(map[string][]string),
+		grammar: make(map[string]*Rule),
+		options: make(map[string][]string),
 	}
 }
 
@@ -37,8 +35,9 @@ var rStart, rDefinition, rExpression,
 	rLiteral, rClass, rRange, rChar,
 	rLEFTARROW, rSLASH, rAND, rNOT, rQUESTION, rSTAR, rPLUS, rOPEN, rCLOSE, rDOT,
 	rSpacing, rComment, rSpace, rEndOfLine, rEndOfFile, rBeginTok, rEndTok,
-	rIGNORE, rSEPARATOR,
-	rOption, rOptionValue, rOptionComment, rASSIGN Rule
+	rIgnore, rIGNORE,
+	rParameters, rArguments, rCOMMA,
+	rOption, rOptionValue, rOptionComment, rASSIGN, rSEPARATOR Rule
 
 func init() {
 	// Setup PEG syntax parser
@@ -48,17 +47,23 @@ func init() {
 		Opt(Seq(&rSEPARATOR, Oom(&rOption))),
 		&rEndOfFile)
 
-	rDefinition.Ope = Seq(Opt(&rIGNORE), &rIdentifier, &rLEFTARROW, &rExpression)
+	rDefinition.Ope = Cho(
+		Seq(&rIgnore, &rIdentCont, &rParameters, &rLEFTARROW, &rExpression),
+		Seq(&rIgnore, &rIdentifier, &rLEFTARROW, &rExpression))
 
 	rExpression.Ope = Seq(&rSequence, Zom(Seq(&rSLASH, &rSequence)))
 	rSequence.Ope = Zom(&rPrefix)
 	rPrefix.Ope = Seq(Opt(Cho(&rAND, &rNOT)), &rSuffix)
 	rSuffix.Ope = Seq(&rPrimary, Opt(Cho(&rQUESTION, &rSTAR, &rPLUS)))
+
 	rPrimary.Ope = Cho(
-		Seq(Opt(&rIGNORE), &rIdentifier, Npd(&rLEFTARROW)),
+		Seq(&rIgnore, &rIdentCont, &rArguments, Npd(&rLEFTARROW)),
+		Seq(&rIgnore, &rIdentifier, Npd(Seq(Opt(&rParameters), &rLEFTARROW))),
 		Seq(&rOPEN, &rExpression, &rCLOSE),
 		Seq(&rBeginTok, &rExpression, &rEndTok),
-		&rLiteral, &rClass, &rDOT)
+		&rLiteral,
+		&rClass,
+		&rDOT)
 
 	rIdentifier.Ope = Seq(&rIdentCont, &rSpacing)
 	rIdentCont.Ope = Seq(&rIdentStart, Zom(&rIdentRest))
@@ -88,7 +93,9 @@ func init() {
 	rSTAR.Ope = Seq(Lit("*"), &rSpacing)
 	rPLUS.Ope = Seq(Lit("+"), &rSpacing)
 	rOPEN.Ope = Seq(Lit("("), &rSpacing)
+	rOPEN.Ignore = true
 	rCLOSE.Ope = Seq(Lit(")"), &rSpacing)
+	rCLOSE.Ignore = true
 	rDOT.Ope = Seq(Lit("."), &rSpacing)
 
 	rSpacing.Ope = Zom(Cho(&rSpace, &rComment))
@@ -97,46 +104,81 @@ func init() {
 	rEndOfLine.Ope = Cho(Lit("\r\n"), Lit("\n"), Lit("\r"))
 	rEndOfFile.Ope = Npd(Dot())
 
-	rBeginTok.Ope = Seq(Cls("<"), &rSpacing)
-	rEndTok.Ope = Seq(Cls(">"), &rSpacing)
+	rBeginTok.Ope = Seq(Lit("<"), &rSpacing)
+	rBeginTok.Ignore = true
+	rEndTok.Ope = Seq(Lit(">"), &rSpacing)
+	rEndTok.Ignore = true
 
 	rIGNORE.Ope = Lit("~")
 	rSEPARATOR.Ope = Seq(Lit("---"), &rSpacing)
 
+	rIgnore.Ope = Opt(&rIGNORE)
+
+	rParameters.Ope = Seq(&rOPEN, &rIdentifier, Zom(Seq(&rCOMMA, &rIdentifier)), &rCLOSE)
+	rArguments.Ope = Seq(&rOPEN, &rExpression, Zom(Seq(&rCOMMA, &rExpression)), &rCLOSE)
+	rCOMMA.Ope = Seq(Lit(","), &rSpacing)
+	rCOMMA.Ignore = true
+
 	rOption.Ope = Seq(&rIdentifier, &rASSIGN, &rOptionValue)
-	rASSIGN.Ope = Seq(Lit("="), &rSpacing)
 	rOptionComment.Ope = Seq(Zom(Cho(Lit(" "), Lit("\t"))), Cho(&rComment, &rEndOfLine))
 	rOptionValue.Ope = Seq(Tok(Zom(Seq(Npd(&rOptionComment), Dot()))), &rOptionComment, &rSpacing)
+	rASSIGN.Ope = Seq(Lit("="), &rSpacing)
+	rSEPARATOR.Ope = Seq(Lit("---"), &rSpacing)
 
 	// Setup actions
 	rDefinition.Action = func(v *Values, d Any) (val Any, err error) {
-		data := d.(*data)
+		var ignore bool
+		var name string
+		var params []string
+		var ope operator
 
-		ignore := len(v.Vs) == 4
-
-		baseId := 0
-		if ignore {
-			baseId = 1
+		switch v.Choice {
+		case 0: // Macro
+			ignore = v.ToBool(0)
+			name = v.ToStr(1)
+			params = v.Vs[2].([]string)
+			ope = v.ToOpe(4)
+		case 1: // Rule
+			ignore = v.ToBool(0)
+			name = v.ToStr(1)
+			ope = v.ToOpe(3)
 		}
 
-		name := v.ToStr(baseId)
-		ope := v.ToOpe(baseId + 2)
-
+		data := d.(*data)
 		_, ok := data.grammar[name]
 		if ok {
 			data.duplicates = append(data.duplicates, duplicate{name, v.Pos})
 		} else {
 			data.grammar[name] = &Rule{
-				Ope:    ope,
-				Name:   name,
-				SS:     v.SS,
-				Pos:    v.Pos,
-				Ignore: ignore,
+				Ope:        ope,
+				Name:       name,
+				SS:         v.SS,
+				Pos:        v.Pos,
+				Ignore:     ignore,
+				Parameters: params,
 			}
 			if len(data.start) == 0 {
 				data.start = name
 			}
 		}
+		return
+	}
+
+	rParameters.Action = func(v *Values, d Any) (val Any, err error) {
+		var params []string
+		for i := 0; i < len(v.Vs); i++ {
+			params = append(params, v.ToStr(i))
+		}
+		val = params
+		return
+	}
+
+	rArguments.Action = func(v *Values, d Any) (val Any, err error) {
+		var exprs []operator
+		for i := 0; i < len(v.Vs); i++ {
+			exprs = append(exprs, v.ToOpe(i))
+		}
+		val = exprs
 		return
 	}
 
@@ -201,31 +243,32 @@ func init() {
 	}
 
 	rPrimary.Action = func(v *Values, d Any) (val Any, err error) {
-		data := d.(*data)
-
 		switch v.Choice {
-		case 0: // Reference
-			ignore := len(v.Vs) == 2
-			baseId := 0
+		case 0: // Macro Reference
+			ignore := v.ToBool(0)
+			ident := v.ToStr(1)
+			args := v.Vs[2].([]operator)
+
+			data := d.(*data)
 			if ignore {
-				baseId = 1
-			}
-
-			ident := v.ToStr(baseId)
-
-			if _, ok := data.references[ident]; !ok {
-				data.references[ident] = v.Pos // for error handling
-			}
-
-			if ignore {
-				val = Ign(Ref(data.grammar, ident, v.Pos))
+				val = Ign(Ref(data.grammar, ident, args, v.Pos))
 			} else {
-				val = Ref(data.grammar, ident, v.Pos)
+				val = Ref(data.grammar, ident, args, v.Pos)
 			}
-		case 1: // (Expression)
-			val = v.ToOpe(1)
-		case 2: // TokenBoundary
-			val = Tok(v.ToOpe(1))
+		case 1: // Reference
+			ignore := v.ToBool(0)
+			ident := v.ToStr(1)
+
+			data := d.(*data)
+			if ignore {
+				val = Ign(Ref(data.grammar, ident, nil, v.Pos))
+			} else {
+				val = Ref(data.grammar, ident, nil, v.Pos)
+			}
+		case 2: // Expression
+			val = v.ToOpe(0)
+		case 3: // TokenBoundary
+			val = Tok(v.ToOpe(0))
 		default:
 			val = v.ToOpe(0)
 		}
@@ -262,6 +305,11 @@ func init() {
 
 	rDOT.Action = func(v *Values, d Any) (Any, error) {
 		return Dot(), nil
+	}
+
+	rIgnore.Action = func(v *Values, d Any) (val Any, err error) {
+		val = len(v.Vs) != 0
+		return
 	}
 
 	rOption.Action = func(v *Values, d Any) (val Any, err error) {
@@ -462,13 +510,20 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 	}
 
 	// Check missing definitions
-	for name, pos := range data.references {
-		if _, ok := data.grammar[name]; !ok {
+	for _, r := range data.grammar {
+		v := &referenceChecker{
+			grammar:  data.grammar,
+			params:   r.Parameters,
+			errorPos: make(map[string]int),
+			errorMsg: make(map[string]string),
+		}
+		r.accept(v)
+		for name, pos := range v.errorPos {
 			if err == nil {
 				err = &Error{}
 			}
 			ln, col := lineInfo(s, pos)
-			msg := "'" + name + "' is not defined."
+			msg := v.errorMsg[name]
 			err.Details = append(err.Details, ErrorDetail{ln, col, msg})
 		}
 	}
@@ -477,20 +532,30 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 		return nil, err
 	}
 
+	// Link references
+	for _, r := range data.grammar {
+		v := &linkReferences{
+			rule:    r,
+			grammar: data.grammar,
+		}
+		r.accept(v)
+	}
+
 	// Check left recursion
 	for name, r := range data.grammar {
-		lr := &detectLeftRecursion{
-			pos:  -1,
-			name: name,
-			refs: make(map[string]bool),
-			done: false,
+		v := &detectLeftRecursion{
+			pos:    -1,
+			name:   name,
+			params: r.Parameters,
+			refs:   make(map[string]bool),
+			done:   false,
 		}
-		r.accept(lr)
-		if lr.pos != -1 {
+		r.accept(v)
+		if v.pos != -1 {
 			if err == nil {
 				err = &Error{}
 			}
-			ln, col := lineInfo(s, lr.pos)
+			ln, col := lineInfo(s, v.pos)
 			msg := "'" + name + "' is left recursive."
 			err.Details = append(err.Details, ErrorDetail{ln, col, msg})
 		}

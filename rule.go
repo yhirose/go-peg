@@ -39,8 +39,11 @@ type Rule struct {
 	Ignore        bool
 	WhitespaceOpe operator
 	KeywordOpe    operator
-	TracerEnter   func(name string, s string, v *Values, d Any, p int)
-	TracerLeave   func(name string, s string, v *Values, d Any, p int, l int)
+
+	Parameters []string
+
+	TracerEnter func(name string, s string, v *Values, d Any, p int)
+	TracerLeave func(name string, s string, v *Values, d Any, p int, l int)
 
 	tokenChecker  *tokenChecker
 	disableAction bool

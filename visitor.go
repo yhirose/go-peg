@@ -68,8 +68,7 @@ func (v *tokenChecker) visitOption(ope *option)               { ope.ope.accept(v
 func (v *tokenChecker) visitTokenBoundary(ope *tokenBoundary) { v.hasTokenBoundary = true }
 func (v *tokenChecker) visitIgnore(ope *ignore)               { ope.ope.accept(v) }
 func (v *tokenChecker) visitReference(ope *reference)         { v.hasRule = true }
-func (v *tokenChecker) visitRule(ope *Rule)                   { v.hasRule = true }
-func (v *tokenChecker) visitExpression(ope *expression)       { v.hasRule = true }
+func (v *tokenChecker) visitExpression(ope *expression)       { ope.atom.accept(v) }
 
 func (v *tokenChecker) isToken() bool {
 	return v.hasTokenBoundary || !v.hasRule

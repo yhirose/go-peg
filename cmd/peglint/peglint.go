@@ -10,7 +10,7 @@ import (
 	"github.com/yhirose/go-peg"
 )
 
-var usageMessage = `usage: peglint [-ast] [-trace] [grammar file path] [source file path]
+var usageMessage = `usage: peglint [-ast] [-opt] [-trace] [-f path] [-e text] [grammar path]
 
 peglint checks syntax of a given PEG grammar file and reports errors. If the check is successful and a user gives a source file for the grammar, it will also check syntax of the source file.
 
@@ -19,6 +19,10 @@ The -ast flag prints the AST (abstract syntax tree) of the source file.
 The -opt flag prints the optimized AST (abstract syntax tree) of the source file.
 
 The -trace flag can be used with the source file. It prints names of rules and operators that the PEG parser detects on standard error.
+
+The -f 'path' specifies a file path to the source text.
+
+The -e 'text' specifies the source text.
 `
 
 func usage() {
@@ -27,10 +31,12 @@ func usage() {
 }
 
 var (
-	astFlag   = flag.Bool("ast", false, "show ast")
-	optFlag   = flag.Bool("opt", false, "show optimized ast")
-	traceFlag = flag.Bool("trace", false, "show trace message")
-	profFlag  = flag.String("prof", "", "write cpu profile to file")
+	astFlag    = flag.Bool("ast", false, "show ast")
+	optFlag    = flag.Bool("opt", false, "show optimized ast")
+	traceFlag  = flag.Bool("trace", false, "show trace message")
+	filePath   = flag.String("f", "", "source file path")
+	expression = flag.String("e", "", "expression string")
+	profPath   = flag.String("prof", "", "write cpu profile to file")
 )
 
 func check(err error) {
@@ -95,18 +101,25 @@ func main() {
 	parser, perr := peg.NewParser(string(dat))
 	pcheck(perr)
 
-	if len(args) >= 2 {
-		path := args[1]
+	var source string
 
-		var err error
-		if path == "-" {
-			dat, err = ioutil.ReadAll(os.Stdin)
+	if *filePath != "" {
+		if *filePath == "-" {
+			dat, err := ioutil.ReadAll(os.Stdin)
+			check(err)
+			source = string(dat)
 		} else {
-			dat, err = ioutil.ReadFile(path)
+			dat, err := ioutil.ReadFile(*filePath)
+			check(err)
+			source = string(dat)
 		}
-		check(err)
-		source := string(dat)
+	}
 
+	if *expression != "" {
+		source = *expression
+	}
+
+	if len(source) > 0 {
 		if *traceFlag {
 			SetupTracer(parser)
 		}
@@ -115,8 +128,8 @@ func main() {
 			parser.EnableAst()
 		}
 
-		if *profFlag != "" {
-			f, err := os.Create(*profFlag)
+		if *profPath != "" {
+			f, err := os.Create(*profPath)
 			check(err)
 			pprof.StartCPUProfile(f)
 			defer pprof.StopCPUProfile()

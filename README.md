@@ -3,6 +3,8 @@ go-peg
 
 Yet another [PEG](http://en.wikipedia.org/wiki/Parsing_expression_grammar) (Parsing Expression Grammars) parser generator for Go.
 
+If you need a PEG grammar checker, you may want to check [**peglint**](https://github.com/yhirose/go-peg/tree/master/cmd/peglint).
+
 ### Extended features
 
  * Token operator: `<` `>`
@@ -10,6 +12,7 @@ Yet another [PEG](http://en.wikipedia.org/wiki/Parsing_expression_grammar) (Pars
  * Keyword boundary assertion: `%keyword`
  * Expression parsing (precedence climbing)
  * AST generation
+ * Macro
 
 ### Usage
 
@@ -59,8 +62,36 @@ val, _ := parser.ParseAndGetValue(input, nil)
 fmt.Println(val) // Output: -3
 ```
 
+Macro
+-----
+
+#### Simple example:
+
+```peg
+S     <- HELLO WORLD
+HELLO <- T('hello')
+WORLD <- T('world')
+T(a)  <- a [ \t]*
+```
+
+#### Calculator example:
+
+```peg
+EXPRESSION       <-  _ TERM (TERM_OPERATOR TERM)*
+TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
+FACTOR           <-  NUMBER / P('(') EXPRESSION P(')')
+TERM_OPERATOR    <-  T([-+])
+FACTOR_OPERATOR  <-  T([/*])
+NUMBER           <-  T([0-9]+)
+T(S)             <-  < S > _
+~P(S)            <-  < S > _
+~_               <-  [ \t]*
+```
+
 TODO
 ----
+
+ * Better error handling
  * Memoization (Packrat parsing)
 
 License

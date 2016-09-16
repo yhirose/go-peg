@@ -10,7 +10,7 @@ import (
 	"github.com/yhirose/go-peg"
 )
 
-var usageMessage = `usage: peglint [-ast] [-opt] [-trace] [-f path] [-e text] [grammar path]
+var usageMessage = `usage: peglint [-ast] [-opt] [-trace] [-f path] [-s string] [grammar path]
 
 peglint checks syntax of a given PEG grammar file and reports errors. If the check is successful and a user gives a source file for the grammar, it will also check syntax of the source file.
 
@@ -22,7 +22,7 @@ The -trace flag can be used with the source file. It prints names of rules and o
 
 The -f 'path' specifies a file path to the source text.
 
-The -e 'text' specifies the source text.
+The -s 'string' specifies the source text.
 `
 
 func usage() {
@@ -31,12 +31,12 @@ func usage() {
 }
 
 var (
-	astFlag    = flag.Bool("ast", false, "show ast")
-	optFlag    = flag.Bool("opt", false, "show optimized ast")
-	traceFlag  = flag.Bool("trace", false, "show trace message")
-	filePath   = flag.String("f", "", "source file path")
-	expression = flag.String("e", "", "expression string")
-	profPath   = flag.String("prof", "", "write cpu profile to file")
+	astFlag        = flag.Bool("ast", false, "show ast")
+	optFlag        = flag.Bool("opt", false, "show optimized ast")
+	traceFlag      = flag.Bool("trace", false, "show trace message")
+	sourceFilePath = flag.String("f", "", "source file path")
+	sourceString   = flag.String("s", "", "source string")
+	profPath       = flag.String("prof", "", "write cpu profile to file")
 )
 
 func check(err error) {
@@ -103,20 +103,20 @@ func main() {
 
 	var source string
 
-	if *filePath != "" {
-		if *filePath == "-" {
+	if *sourceFilePath != "" {
+		if *sourceFilePath == "-" {
 			dat, err := ioutil.ReadAll(os.Stdin)
 			check(err)
 			source = string(dat)
 		} else {
-			dat, err := ioutil.ReadFile(*filePath)
+			dat, err := ioutil.ReadFile(*sourceFilePath)
 			check(err)
 			source = string(dat)
 		}
 	}
 
-	if *expression != "" {
-		source = *expression
+	if *sourceString != "" {
+		source = *sourceString
 	}
 
 	if len(source) > 0 {

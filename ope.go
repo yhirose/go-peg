@@ -515,13 +515,18 @@ type reference struct {
 
 func (o *reference) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
 	if o.rule != nil {
-		// Rule
-		if o.rule.Parameters != nil {
+		// Reference rule
+		if o.rule.Parameters == nil {
+			// Definition
+			l = o.rule.parse(s, p, v, c, d)
+		} else {
+			// Macro
 			vis := &findReference{
 				args:   c.topArg(),
 				params: o.rule.Parameters,
 			}
 
+			// Collect arguments
 			var args []operator
 			for _, arg := range o.args {
 				arg.accept(vis)
@@ -531,11 +536,9 @@ func (o *reference) parseCore(s string, p int, v *Values, c *context, d Any) (l 
 			c.pushArgs(args)
 			l = o.rule.parse(s, p, v, c, d)
 			c.popArgs()
-		} else {
-			l = o.rule.parse(s, p, v, c, d)
 		}
 	} else {
-		// Parameter
+		// Reference parameter in macro
 		args := c.topArg()
 		l = args[o.iarg].parse(s, p, v, c, d)
 	}
@@ -638,7 +641,7 @@ func Usr(fn func(s string, p int, v *Values, d Any) int) operator {
 	o.derived = o
 	return o
 }
-func Ref(g map[string]*Rule, ident string, args []operator, pos int) operator {
+func Ref(ident string, args []operator, pos int) operator {
 	o := &reference{name: ident, args: args, pos: pos}
 	o.derived = o
 	return o

@@ -65,26 +65,14 @@ fmt.Println(val) // Output: -3
 Macro
 -----
 
-#### Simple example:
-
-```peg
-S     <- HELLO WORLD
-HELLO <- T('hello')
-WORLD <- T('world')
-T(a)  <- a [ \t]*
-```
-
-#### Calculator example:
-
 ```peg
 EXPRESSION       <-  _ TERM (TERM_OPERATOR TERM)*
 TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
-FACTOR           <-  NUMBER / P('(') EXPRESSION P(')')
+FACTOR           <-  NUMBER / T('(') EXPRESSION T(')')
 TERM_OPERATOR    <-  T([-+])
 FACTOR_OPERATOR  <-  T([/*])
 NUMBER           <-  T([0-9]+)
 T(S)             <-  < S > _
-~P(S)            <-  < S > _
 ~_               <-  [ \t]*
 ```
 

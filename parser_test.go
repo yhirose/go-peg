@@ -893,17 +893,12 @@ func TestMacroAction(t *testing.T) {
 	`)
 
 	parser.Grammar["HELLO"].Action = func(sv *Values, d Any) (v Any, err error) {
-		assert(t, sv.ToStr(0) == "hello")
+		assert(t, sv.Token() == "hello")
 		return
 	}
 
 	parser.Grammar["WORLD"].Action = func(sv *Values, d Any) (v Any, err error) {
-		assert(t, sv.ToStr(0) == "world")
-		return
-	}
-
-	parser.Grammar["T"].Action = func(sv *Values, d Any) (v Any, err error) {
-		v = sv.Token()
+		assert(t, sv.Token() == "world")
 		return
 	}
 
@@ -917,12 +912,11 @@ func TestMacroCalculator(t *testing.T) {
         # Grammar for simple calculator...
         EXPRESSION       <-  _ TERM (TERM_OPERATOR TERM)*
         TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
-        FACTOR           <-  NUMBER / P('(') EXPRESSION P(')')
+        FACTOR           <-  NUMBER / T('(') EXPRESSION T(')')
         TERM_OPERATOR    <-  T([-+])
         FACTOR_OPERATOR  <-  T([/*])
         NUMBER           <-  T([0-9]+)
 		T(S)             <-  < S > _
-		~P(S)            <-  < S > _
 		~_               <-  [ \t]*
     `)
 
@@ -948,8 +942,9 @@ func TestMacroCalculator(t *testing.T) {
 	g := parser.Grammar
 	g["EXPRESSION"].Action = reduce
 	g["TERM"].Action = reduce
-	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.ToStr(0)) }
-	g["T"].Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
+	g["TERM_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
+	g["FACTOR_OPERATOR"].Action = func(v *Values, d Any) (Any, error) { return v.Token(), nil }
+	g["NUMBER"].Action = func(v *Values, d Any) (Any, error) { return strconv.Atoi(v.Token()) }
 
 	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
 	val, err := parser.ParseAndGetValue(input, nil)

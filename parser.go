@@ -244,26 +244,19 @@ func init() {
 
 	rPrimary.Action = func(v *Values, d Any) (val Any, err error) {
 		switch v.Choice {
-		case 0: // Macro Reference
+		case 0 /* Macro Reference */, 1: /* Reference */
 			ignore := v.ToBool(0)
 			ident := v.ToStr(1)
-			args := v.Vs[2].([]operator)
 
-			data := d.(*data)
-			if ignore {
-				val = Ign(Ref(data.grammar, ident, args, v.Pos))
-			} else {
-				val = Ref(data.grammar, ident, args, v.Pos)
+			var args []operator
+			if v.Choice == 0 {
+				args = v.Vs[2].([]operator)
 			}
-		case 1: // Reference
-			ignore := v.ToBool(0)
-			ident := v.ToStr(1)
 
-			data := d.(*data)
 			if ignore {
-				val = Ign(Ref(data.grammar, ident, nil, v.Pos))
+				val = Ign(Ref(ident, args, v.Pos))
 			} else {
-				val = Ref(data.grammar, ident, nil, v.Pos)
+				val = Ref(ident, args, v.Pos)
 			}
 		case 2: // Expression
 			val = v.ToOpe(0)

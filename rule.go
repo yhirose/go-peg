@@ -104,6 +104,11 @@ func (o *Rule) parse(s string, p int, v *Values, c *context, d Any) int {
 }
 
 func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
+	// Macro reference
+	if r.Parameters != nil {
+		return r.Ope.parse(s, p, v, c, d)
+	}
+
 	if r.Enter != nil {
 		r.Enter(d)
 	}

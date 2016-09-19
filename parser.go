@@ -528,8 +528,8 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 	// Link references
 	for _, r := range data.grammar {
 		v := &linkReferences{
-			rule:    r,
-			grammar: data.grammar,
+			parameters: r.Parameters,
+			grammar:    data.grammar,
 		}
 		r.accept(v)
 	}

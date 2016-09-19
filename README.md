@@ -66,14 +66,23 @@ Macro
 -----
 
 ```peg
-EXPRESSION       <-  _ TERM (TERM_OPERATOR TERM)*
-TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
-FACTOR           <-  NUMBER / T('(') EXPRESSION T(')')
-TERM_OPERATOR    <-  T([-+])
-FACTOR_OPERATOR  <-  T([/*])
-NUMBER           <-  T([0-9]+)
-T(S)             <-  < S > _
-~_               <-  [ \t]*
+# Syntax
+Start      ← _ Expr
+Expr       ← Sum
+Sum        ← List(Product, SumOpe)
+Product    ← List(Value, ProOpe)
+Value      ← Number / P('(') Expr P(')')
+
+# Token
+SumOpe     ← T('+' / '-')
+ProOpe     ← T('*' / '/')
+Number     ← T([0-9]+)
+~_         ← [ \t\r\n]*
+
+# Macro
+List(I, D) ← I (D I)*
+T(x)       ← < x > _
+P(x)       ← < x > _
 ```
 
 TODO

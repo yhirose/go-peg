@@ -68,6 +68,9 @@ func (v *tokenChecker) visitIgnore(ope *ignore)               { ope.ope.accept(v
 func (v *tokenChecker) visitReference(ope *reference) {
 	if ope.args != nil {
 		ope.rule.accept(v)
+		for _, arg := range ope.args {
+			arg.accept(v)
+		}
 	} else {
 		v.hasRule = true
 	}
@@ -189,8 +192,8 @@ func (v *referenceChecker) visitExpression(ope *expression) { ope.atom.accept(v)
 // linkReferences
 type linkReferences struct {
 	*visitorBase
-	rule    *Rule
-	grammar map[string]*Rule
+	parameters []string
+	grammar    map[string]*Rule
 }
 
 func (v *linkReferences) visitSequence(ope *sequence) {
@@ -214,12 +217,15 @@ func (v *linkReferences) visitReference(ope *reference) {
 	if r, ok := v.grammar[ope.name]; ok {
 		ope.rule = r
 	} else {
-		for i, param := range v.rule.Parameters {
+		for i, param := range v.parameters {
 			if param == ope.name {
 				ope.iarg = i
 				break
 			}
 		}
+	}
+	for _, arg := range ope.args {
+		arg.accept(v)
 	}
 }
 func (v *linkReferences) visitRule(ope *Rule)             { ope.Ope.accept(v) }

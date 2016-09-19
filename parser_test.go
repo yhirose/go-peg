@@ -884,40 +884,19 @@ func TestInvalidMacroReferenceError(t *testing.T) {
 	assert(t, err != nil)
 }
 
-func TestMacroAction(t *testing.T) {
-	parser, err := NewParser(`
-		S     <- HELLO WORLD
-		HELLO <- T('hello')
-		WORLD <- T('world')
-		T(a)  <- < a > [ \t]*
-	`)
-
-	parser.Grammar["HELLO"].Action = func(sv *Values, d Any) (v Any, err error) {
-		assert(t, sv.Token() == "hello")
-		return
-	}
-
-	parser.Grammar["WORLD"].Action = func(sv *Values, d Any) (v Any, err error) {
-		assert(t, sv.Token() == "world")
-		return
-	}
-
-	assert(t, err == nil)
-	assert(t, parser.Parse("hello \tworld ", nil) == nil)
-}
-
 func TestMacroCalculator(t *testing.T) {
 	// Create a PEG parser
 	parser, _ := NewParser(`
         # Grammar for simple calculator...
-        EXPRESSION       <-  _ TERM (TERM_OPERATOR TERM)*
-        TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
+        EXPRESSION       <-  _ LIST(TERM, TERM_OPERATOR)
+        TERM             <-  LIST(FACTOR, FACTOR_OPERATOR)
         FACTOR           <-  NUMBER / T('(') EXPRESSION T(')')
         TERM_OPERATOR    <-  T([-+])
         FACTOR_OPERATOR  <-  T([/*])
         NUMBER           <-  T([0-9]+)
-		T(S)             <-  < S > _
 		~_               <-  [ \t]*
+		LIST(I, D)       <-  I (D I)*
+		T(S)             <-  < S > _
     `)
 
 	// Setup actions

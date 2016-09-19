@@ -71,7 +71,7 @@ Start      ← _ Expr
 Expr       ← Sum
 Sum        ← List(Product, SumOpe)
 Product    ← List(Value, ProOpe)
-Value      ← Number / P('(') Expr P(')')
+Value      ← Number / T('(') Expr T(')')
 
 # Token
 SumOpe     ← T('+' / '-')
@@ -82,7 +82,6 @@ Number     ← T([0-9]+)
 # Macro
 List(I, D) ← I (D I)*
 T(x)       ← < x > _
-P(x)       ← < x > _
 ```
 
 TODO

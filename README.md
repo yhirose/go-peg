@@ -12,7 +12,7 @@ If you need a PEG grammar checker, you may want to check [**peglint**](https://g
  * Keyword boundary assertion: `%keyword`
  * Expression parsing (precedence climbing)
  * AST generation
- * Macro
+ * Parameterized or Macro rule
 
 ### Usage
 
@@ -62,8 +62,8 @@ val, _ := parser.ParseAndGetValue(input, nil)
 fmt.Println(val) // Output: -3
 ```
 
-Macro
------
+Parameterized or Macro rule
+---------------------------
 
 ```peg
 # Syntax

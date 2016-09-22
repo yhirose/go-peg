@@ -4,7 +4,7 @@ import "strings"
 
 const (
 	WhitespceRuleName = "%whitespace"
-	KeywordRuleName   = "%keyword"
+	WordRuleName      = "%word"
 	OptExpressionRule = "%expr"
 	OptBinaryOperator = "%binop"
 )
@@ -563,9 +563,9 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 		data.grammar[data.start].WhitespaceOpe = Wsp(r)
 	}
 
-	// Automatic keyword boundary anchor check
-	if r, ok := data.grammar[KeywordRuleName]; ok {
-		data.grammar[data.start].KeywordOpe = r
+	// Word expression
+	if r, ok := data.grammar[WordRuleName]; ok {
+		data.grammar[data.start].WordOpe = r
 	}
 
 	p = &Parser{

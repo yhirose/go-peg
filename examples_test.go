@@ -200,3 +200,63 @@ func Example_expressionParsing() {
 	fmt.Println(val)
 	// Output: -3
 }
+
+func Example_AST() {
+	// Create a PEG parser
+	parser, _ := NewParser(`
+        EXPRESSION       <-  TERM (TERM_OPERATOR TERM)*
+        TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
+        FACTOR           <-  NUMBER / '(' EXPRESSION ')'
+        TERM_OPERATOR    <-  < [-+] >
+        FACTOR_OPERATOR  <-  < [/*] >
+        NUMBER           <-  < [0-9]+ >
+		%whitespace      <-  [ \t\r\n]*
+    `)
+
+	// Evaluator
+	var eval func(ast *Ast) int
+	eval = func(ast *Ast) int {
+		if ast.Name == "NUMBER" {
+			val, _ := strconv.Atoi(ast.Token)
+			return val
+		} else {
+			nodes := ast.Nodes
+			val := eval(nodes[0])
+			for i := 1; i < len(nodes); i += 2 {
+				num := eval(nodes[i+1])
+				ope := nodes[i].Token[0]
+				switch ope {
+				case '+':
+					val += num
+					break
+				case '-':
+					val -= num
+					break
+				case '*':
+					val *= num
+					break
+				case '/':
+					val /= num
+					break
+				}
+			}
+			return val
+		}
+	}
+
+	// Generate AST
+	parser.EnableAst()
+	input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
+	ret, _ := parser.ParseAndGetValue(input, nil)
+	ast := ret.(*Ast)
+
+	// Optimize AST
+	opt := NewAstOptimizer(nil)
+	ast = opt.Optimize(ast, nil)
+
+	// Evaluate AST
+	val := eval(ast)
+
+	fmt.Println(val)
+	// Output: -3
+}

@@ -9,25 +9,25 @@ If you need a PEG grammar checker, you may want to check [**peglint**](https://g
 
  * Token operator: `<` `>`
  * Automatic whitespace skipping: `%whitespace`
- * Keyword boundary assertion: `%keyword`
- * Expression parsing (precedence climbing)
+ * Expression parsing for binary operators ([precedence climbing method](https://en.wikipedia.org/wiki/Operator-precedence_parser#Precedence_climbing_method))
+ * Parameterized rule or Macro
+ * Word expression: `%word`
  * AST generation
- * Parameterized or Macro rule
 
 ### Usage
 
 ```go
 // Create a PEG parser
 parser, _ := NewParser(`
-    # Grammar for simple calculator...
-    EXPR         <-  ATOM (BINOP ATOM)*     # Use expression parsing option
-    ATOM         <-  NUMBER / '(' EXPR ')'
-    BINOP        <-  < [-+/*] >
-    NUMBER       <-  < [0-9]+ >
-    %whitespace  <-  [ \t]*
+    # Simple calculator
+    EXPR         ←  ATOM (BINOP ATOM)*
+    ATOM         ←  NUMBER / '(' EXPR ')'
+    BINOP        ←  < [-+/*] >
+    NUMBER       ←  < [0-9]+ >
+    %whitespace  ←  [ \t]*
     ---
     # Expression parsing option
-    %expr  = EXPR   # Rule for expression parsing
+    %expr  = EXPR   # Rule to apply 'precedence climbing method' to
     %binop = L + -  # Precedence level 1
     %binop = L * /  # Precedence level 2
 `)
@@ -62,7 +62,7 @@ val, _ := parser.ParseAndGetValue(input, nil)
 fmt.Println(val) // Output: -3
 ```
 
-Parameterized or Macro rule
+Parameterized Rule or Macro
 ---------------------------
 
 ```peg
@@ -82,6 +82,82 @@ Number     ← T([0-9]+)
 # Macro
 List(I, D) ← I (D I)*
 T(x)       ← < x > _
+```
+
+Word expression
+---------------
+
+```go
+parser, _ := NewParser(`
+    ROOT         ←  'hello' 'world'
+    %whitespace  ←  [ \t\r\n]*
+    %word        ←  [a-z]+
+`)
+
+parser.Parse("hello world", nil) # OK
+parser.Parse("helloworld", nil)  # NG
+```
+
+AST generation
+--------------
+
+```go
+// Create a PEG parser
+parser, _ := NewParser(`
+    EXPRESSION       <-  TERM (TERM_OPERATOR TERM)*
+    TERM             <-  FACTOR (FACTOR_OPERATOR FACTOR)*
+    FACTOR           <-  NUMBER / '(' EXPRESSION ')'
+    TERM_OPERATOR    <-  < [-+] >
+    FACTOR_OPERATOR  <-  < [/*] >
+    NUMBER           <-  < [0-9]+ >
+    %whitespace      <-  [ \t\r\n]*
+`)
+
+// Evaluator
+var eval func(ast *Ast) int
+eval = func(ast *Ast) int {
+    if ast.Name == "NUMBER" {
+        val, _ := strconv.Atoi(ast.Token)
+        return val
+    } else {
+        nodes := ast.Nodes
+        val := eval(nodes[0])
+        for i := 1; i < len(nodes); i += 2 {
+            num := eval(nodes[i+1])
+            ope := nodes[i].Token[0]
+            switch ope {
+            case '+':
+                val += num
+                break
+            case '-':
+                val -= num
+                break
+            case '*':
+                val *= num
+                break
+            case '/':
+                val /= num
+                break
+            }
+        }
+        return val
+    }
+}
+
+// Generate AST
+parser.EnableAst()
+input := " 1 + 2 * 3 * (4 - 5 + 6) / 7 - 8 "
+ret, _ := parser.ParseAndGetValue(input, nil)
+ast := ret.(*Ast)
+
+// Optimize AST
+opt := NewAstOptimizer(nil)
+ast = opt.Optimize(ast, nil)
+
+// Evaluate AST
+val := eval(ast)
+
+fmt.Println(val) // Output: -3
 ```
 
 TODO

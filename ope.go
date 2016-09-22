@@ -76,7 +76,7 @@ type context struct {
 	whitespaceOpe operator
 	inWhitespace  bool
 
-	keywordOpe operator
+	wordOpe operator
 
 	tracerEnter func(name string, s string, v *Values, d Any, p int)
 	tracerLeave func(name string, s string, v *Values, d Any, p int, l int)
@@ -337,9 +337,9 @@ func (o *notPredicate) accept(v visitor) {
 // Literal String
 type literalString struct {
 	opeBase
-	lit           string
-	initIsKeyword sync.Once
-	isKeyword     bool
+	lit        string
+	initIsWord sync.Once
+	isWord     bool
 }
 
 func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any) int {
@@ -351,15 +351,15 @@ func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any)
 		}
 	}
 
-	// Keyword boundary check
-	o.initIsKeyword.Do(func() {
-		if c.keywordOpe != nil {
-			len := c.keywordOpe.parse(o.lit, 0, &Values{}, &context{s: s}, nil)
-			o.isKeyword = success(len)
+	// Word check
+	o.initIsWord.Do(func() {
+		if c.wordOpe != nil {
+			len := c.wordOpe.parse(o.lit, 0, &Values{}, &context{s: s}, nil)
+			o.isWord = success(len)
 		}
 	})
-	if o.isKeyword {
-		len := Npd(c.keywordOpe).parse(s, p+l, v, &context{s: s}, nil)
+	if o.isWord {
+		len := Npd(c.wordOpe).parse(s, p+l, v, &context{s: s}, nil)
 		if fail(len) {
 			return -1
 		}

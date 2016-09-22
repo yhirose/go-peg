@@ -297,11 +297,11 @@ func TestWhitespace2(t *testing.T) {
 	assert(t, items[2] == "three")
 }
 
-func TestKeywordBounary(t *testing.T) {
+func TestWordExpression(t *testing.T) {
 	parser, _ := NewParser(`
         ROOT         <-  'hello' ','? 'world'
         %whitespace  <-  [ \t\r\n]*
-        %keyword     <-  [a-z]+
+        %word        <-  [a-z]+
 	`)
 
 	assert(t, parser.Parse(`helloworld`, nil) != nil)

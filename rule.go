@@ -38,7 +38,7 @@ type Rule struct {
 	Message       func() (message string)
 	Ignore        bool
 	WhitespaceOpe operator
-	KeywordOpe    operator
+	WordOpe       operator
 
 	Parameters []string
 
@@ -56,7 +56,7 @@ func (r *Rule) Parse(s string, d Any) (l int, val Any, err *Error) {
 		errorPos:      -1,
 		messagePos:    -1,
 		whitespaceOpe: r.WhitespaceOpe,
-		keywordOpe:    r.KeywordOpe,
+		wordOpe:       r.WordOpe,
 		tracerEnter:   r.TracerEnter,
 		tracerLeave:   r.TracerLeave,
 	}

@@ -5,6 +5,8 @@ Yet another [PEG](http://en.wikipedia.org/wiki/Parsing_expression_grammar) (Pars
 
 If you need a PEG grammar checker, you may want to check [**peglint**](https://github.com/yhirose/go-peg/tree/master/cmd/peglint).
 
+If you need a C++ version, please see [*cpp-peglib*](https://github.com/yhirose/cpp-peglib).
+
 ### Extended features
 
  * Token operator: `<` `>`

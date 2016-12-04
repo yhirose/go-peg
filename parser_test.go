@@ -1146,6 +1146,8 @@ func TestPegChar(t *testing.T) {
 	match(t, &rChar, "\\n", true)
 	match(t, &rChar, "\\r", true)
 	match(t, &rChar, "\\t", true)
+	match(t, &rChar, "\\f", true)
+	match(t, &rChar, "\\v", true)
 	match(t, &rChar, "\\'", true)
 	match(t, &rChar, "\\\"", true)
 	match(t, &rChar, "\\[", true)

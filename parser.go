@@ -78,7 +78,7 @@ func init() {
 
 	rRange.Ope = Cho(Seq(&rChar, Lit("-"), &rChar), &rChar)
 	rChar.Ope = Cho(
-		Seq(Lit("\\"), Cls("nrt'\"[]\\")),
+		Seq(Lit("\\"), Cls("nrtfv'\"[]\\")),
 		Seq(Lit("\\"), Cls("0-3"), Cls("0-7"), Cls("0-7")),
 		Seq(Lit("\\"), Cls("0-7"), Opt(Cls("0-7"))),
 		Seq(Lit("\\x"), Cls("0-9a-fA-F"), Opt(Cls("0-9a-fA-F"))),
@@ -383,6 +383,12 @@ func resolveEscapeSequence(s string) string {
 				i++
 			case 't':
 				b = append(b, '\t')
+				i++
+			case 'f':
+				b = append(b, '\f')
+				i++
+			case 'v':
+				b = append(b, '\v')
 				i++
 			case '\'':
 				b = append(b, '\'')

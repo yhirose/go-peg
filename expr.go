@@ -124,7 +124,7 @@ func Exp(atom operator, binop operator, bopinf BinOpeInfo, action *Action) opera
 	return o
 }
 
-func EnableExpressionParsing(p *Parser, name string, bopinf BinOpeInfo) *Error {
+func EnableExpressionParsing(p *Parser, name string, bopinf BinOpeInfo) error {
 	if r, ok := p.Grammar[name]; ok {
 		seq := r.Ope.(*sequence)
 		atom := seq.opes[0].(*reference)

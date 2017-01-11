@@ -46,8 +46,8 @@ func check(err error) {
 	}
 }
 
-func pcheck(perr *peg.Error) {
-	if perr != nil {
+func pcheck(err error) {
+	if perr, ok := err.(*peg.Error); ok {
 		for _, d := range perr.Details {
 			fmt.Println(d)
 		}
@@ -98,8 +98,8 @@ func main() {
 	dat, err := ioutil.ReadFile(args[0])
 	check(err)
 
-	parser, perr := peg.NewParser(string(dat))
-	pcheck(perr)
+	parser, err := peg.NewParser(string(dat))
+	pcheck(err)
 
 	var source string
 
@@ -135,8 +135,8 @@ func main() {
 			defer pprof.StopCPUProfile()
 		}
 
-		val, perr := parser.ParseAndGetValue(source, nil)
-		pcheck(perr)
+		val, err := parser.ParseAndGetValue(source, nil)
+		pcheck(err)
 
 		if *astFlag || *optFlag {
 			ast := val.(*peg.Ast)

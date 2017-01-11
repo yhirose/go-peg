@@ -249,10 +249,13 @@ func TestEnterExitHandlers(t *testing.T) {
 	assert(t, parser.Parse("hello=WORLD", d) == nil)
 	assert(t, parser.Parse("HELLO=WORLD", d) == nil)
 
-	err := parser.Parse("hello=world", d)
-	assert(t, err.Details[0].Ln == 1)
-	assert(t, err.Details[0].Col == 7)
-	assert(t, err.Details[0].Msg == msg)
+	var err error
+	err = parser.Parse("hello=world", d)
+	pegErr, ok := err.(*Error)
+	assert(t, ok)
+	assert(t, pegErr.Details[0].Ln == 1)
+	assert(t, pegErr.Details[0].Col == 7)
+	assert(t, pegErr.Details[0].Msg == msg)
 }
 
 func TestWhitespace(t *testing.T) {

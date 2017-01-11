@@ -468,11 +468,11 @@ type Parser struct {
 	TracerLeave func(name string, s string, v *Values, d Any, p int, l int)
 }
 
-func NewParser(s string) (p *Parser, err *Error) {
+func NewParser(s string) (p *Parser, err error) {
 	return NewParserWithUserRules(s, nil)
 }
 
-func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err *Error) {
+func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err error) {
 	data := newData()
 
 	_, _, err = rStart.Parse(s, data)
@@ -504,7 +504,7 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 		for _, dup := range data.duplicates {
 			ln, col := lineInfo(s, dup.pos)
 			msg := "'" + dup.name + "' is already defined."
-			err.Details = append(err.Details, ErrorDetail{ln, col, msg})
+			err.(*Error).Details = append(err.(*Error).Details, ErrorDetail{ln, col, msg})
 		}
 	}
 
@@ -523,7 +523,7 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 			}
 			ln, col := lineInfo(s, pos)
 			msg := v.errorMsg[name]
-			err.Details = append(err.Details, ErrorDetail{ln, col, msg})
+			err.(*Error).Details = append(err.(*Error).Details, ErrorDetail{ln, col, msg})
 		}
 	}
 
@@ -556,7 +556,7 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 			}
 			ln, col := lineInfo(s, v.pos)
 			msg := "'" + name + "' is left recursive."
-			err.Details = append(err.Details, ErrorDetail{ln, col, msg})
+			err.(*Error).Details = append(err.(*Error).Details, ErrorDetail{ln, col, msg})
 		}
 	}
 
@@ -586,12 +586,12 @@ func NewParserWithUserRules(s string, rules map[string]operator) (p *Parser, err
 	return
 }
 
-func (p *Parser) Parse(s string, d Any) (err *Error) {
+func (p *Parser) Parse(s string, d Any) (err error) {
 	_, err = p.ParseAndGetValue(s, d)
 	return
 }
 
-func (p *Parser) ParseAndGetValue(s string, d Any) (val Any, err *Error) {
+func (p *Parser) ParseAndGetValue(s string, d Any) (val Any, err error) {
 	r := p.Grammar[p.start]
 	r.TracerEnter = p.TracerEnter
 	r.TracerLeave = p.TracerLeave

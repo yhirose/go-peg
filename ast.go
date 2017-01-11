@@ -75,7 +75,7 @@ func (p *Parser) EnableAst() (err error) {
 	return err
 }
 
-func (p *Parser) ParseAndGetAst(s string, d Any) (ast *Ast, err *Error) {
+func (p *Parser) ParseAndGetAst(s string, d Any) (ast *Ast, err error) {
 	if val, err := p.ParseAndGetValue(s, d); err == nil {
 		ast = val.(*Ast)
 	}

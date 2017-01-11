@@ -49,7 +49,7 @@ type Rule struct {
 	disableAction bool
 }
 
-func (r *Rule) Parse(s string, d Any) (l int, val Any, err *Error) {
+func (r *Rule) Parse(s string, d Any) (l int, val Any, err error) {
 	v := &Values{}
 	c := &context{
 		s:             s,
@@ -89,7 +89,7 @@ func (r *Rule) Parse(s string, d Any) (l int, val Any, err *Error) {
 		}
 		ln, col := lineInfo(s, pos)
 		err = &Error{}
-		err.Details = append(err.Details, ErrorDetail{ln, col, msg})
+		err.(*Error).Details = append(err.(*Error).Details, ErrorDetail{ln, col, msg})
 	}
 
 	return

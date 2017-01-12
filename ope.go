@@ -45,6 +45,14 @@ func (v *Values) ToInt(i int) int {
 	return v.Vs[i].(int)
 }
 
+func (v *Values) ToFloat32(i int) float32 {
+	return v.Vs[i].(float32)
+}
+
+func (v *Values) ToFloat64(i int) float64 {
+	return v.Vs[i].(float64)
+}
+
 func (v *Values) ToBool(i int) bool {
 	return v.Vs[i].(bool)
 }

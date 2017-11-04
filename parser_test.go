@@ -828,6 +828,37 @@ func TestJapaneseCharacter(t *testing.T) {
 	assert(t, parser.Parse("サーバーを復旧します。", nil) == nil)
 }
 
+func TestLineInformation(t *testing.T) {
+	parser, err := NewParser(`
+		S    <- _ (WORD _)+
+		WORD <- [A-Za-z]+
+		~_   <- [ \t\r\n]+
+	`)
+
+	type LineInfo struct {
+		Ln  int
+		Col int
+	}
+	var locations []LineInfo
+
+	parser.Grammar["WORD"].Action = func(sv *Values, d Any) (val Any, err error) {
+		ln, col := lineInfo(sv.SS, sv.Pos)
+		locations = append(locations, LineInfo{ln, col})
+		return
+	}
+
+	assert(t, err == nil)
+	assert(t, parser.Parse(" Mon Tue Wed \nThu  Fri  Sat\nSun\n", nil) == nil)
+
+	assert(t, locations[0] == LineInfo{1, 2})
+	assert(t, locations[1] == LineInfo{1, 6})
+	assert(t, locations[2] == LineInfo{1, 10})
+	assert(t, locations[3] == LineInfo{2, 1})
+	assert(t, locations[4] == LineInfo{2, 6})
+	assert(t, locations[5] == LineInfo{2, 11})
+	assert(t, locations[6] == LineInfo{3, 1})
+}
+
 func TestMacroSimple(t *testing.T) {
 	parser, err := NewParser(`
 		S     <- HELLO WORLD

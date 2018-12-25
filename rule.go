@@ -28,17 +28,18 @@ type Action func(v *Values, d Any) (Any, error)
 
 // Rule
 type Rule struct {
-	Name          string
-	SS            string
-	Pos           int
-	Ope           operator
-	Action        Action
-	Enter         func(d Any)
-	Leave         func(d Any)
-	Message       func() (message string)
-	Ignore        bool
-	WhitespaceOpe operator
-	WordOpe       operator
+	Name           string
+	SS             string
+	Pos            int
+	Ope            operator
+	Action         Action
+	Enter          func(d Any)
+	Leave          func(d Any)
+	Message        func() (message string)
+	Ignore         bool
+	WhitespaceOpe  operator
+	WordOpe        operator
+	UseActionError bool
 
 	Parameters []string
 
@@ -75,10 +76,12 @@ func (r *Rule) Parse(s string, d Any) (l int, val Any, err error) {
 	if fail(l) || l != len(s) {
 		var pos int
 		var msg string
+		var actionErr error
 		if fail(l) {
 			if c.messagePos > -1 {
 				pos = c.messagePos
 				msg = c.message
+				actionErr = c.err
 			} else {
 				msg = "syntax error"
 				pos = c.errorPos
@@ -90,6 +93,9 @@ func (r *Rule) Parse(s string, d Any) (l int, val Any, err error) {
 		ln, col := lineInfo(s, pos)
 		err = &Error{}
 		err.(*Error).Details = append(err.(*Error).Details, ErrorDetail{ln, col, msg})
+		if actionErr != nil && r.UseActionError {
+			err = actionErr
+		}
 	}
 
 	return
@@ -130,6 +136,7 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 				if c.messagePos < p {
 					c.messagePos = p
 					c.message = err.Error()
+					c.err = err
 				}
 				l = -1
 			}

@@ -75,6 +75,7 @@ type context struct {
 	errorPos   int
 	messagePos int
 	message    string
+	err        error
 
 	svStack   []Values
 	argsStack [][]operator

@@ -172,14 +172,6 @@ func (r *Rule) isToken() bool {
 	return r.tokenChecker.isToken()
 }
 
-func (r *Rule) hasTokenBoundary() bool {
-	if r.tokenChecker == nil {
-		r.tokenChecker = &tokenChecker{}
-		r.Ope.accept(r.tokenChecker)
-	}
-	return r.tokenChecker.hasTokenBoundary
-}
-
 // lineInfo
 func lineInfo(s string, curPos int) (ln int, col int) {
 	pos := 0

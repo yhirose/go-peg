@@ -989,12 +989,6 @@ func TestMacroRecursive(t *testing.T) {
 	assert(t, parser.Parse("abc 123 abc", nil) == nil)
 }
 
-func testMacroRecursive2(t *testing.T, syntax string) {
-	parser, err := NewParser(syntax)
-	assert(t, err == nil)
-	assert(t, parser.Parse("abc abc-123", nil) == nil)
-}
-
 func TestMacroRecursive2(t *testing.T) {
 	syntaxes := []string{
 		`S <- M('abc') M(s) <- !s / s ' ' M(s* '-' '123') / s`,
@@ -1006,7 +1000,9 @@ func TestMacroRecursive2(t *testing.T) {
 		`S <- M('abc') M(s) <- !s / s ' ' M(~s '-' '123') / s`,
 	}
 	for _, syntax := range syntaxes {
-		testMacroRecursive2(t, syntax)
+		parser, err := NewParser(syntax)
+		assert(t, err == nil)
+		assert(t, parser.Parse("abc abc-123", nil) == nil)
 	}
 }
 

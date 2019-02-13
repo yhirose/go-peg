@@ -513,12 +513,11 @@ func (o *user) accept(v visitor) {
 // Reference
 type reference struct {
 	opeBase
-	name  string
-	iarg  int
-	args  []operator
-	iargs []int
-	pos   int
-	rule  *Rule
+	name string
+	iarg int
+	args []operator
+	pos  int
+	rule *Rule
 }
 
 func (o *reference) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {

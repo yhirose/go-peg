@@ -75,11 +75,12 @@ func (p *Parser) EnableAst() (err error) {
 	return err
 }
 
-func (p *Parser) ParseAndGetAst(s string, d Any) (ast *Ast, err error) {
-	if val, err := p.ParseAndGetValue(s, d); err == nil {
-		ast = val.(*Ast)
+func (p *Parser) ParseAndGetAst(s string, d Any) (*Ast, error) {
+	val, err := p.ParseAndGetValue(s, d)
+	if err != nil {
+		return nil, err
 	}
-	return
+	return val.(*Ast), nil
 }
 
 type AstOptimizer struct {

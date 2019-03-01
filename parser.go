@@ -1,6 +1,8 @@
 package peg
 
-import "strings"
+import (
+	"strings"
+)
 
 const (
 	WhitespceRuleName = "%whitespace"
@@ -52,7 +54,7 @@ func init() {
 		Seq(&rIgnore, &rIdentifier, &rLEFTARROW, &rExpression))
 
 	rExpression.Ope = Seq(&rSequence, Zom(Seq(&rSLASH, &rSequence)))
-	rSequence.Ope = Zom(&rPrefix)
+	rSequence.Ope = Oom(&rPrefix)
 	rPrefix.Ope = Seq(Opt(Cho(&rAND, &rNOT)), &rSuffix)
 	rSuffix.Ope = Seq(&rPrimary, Opt(Cho(&rQUESTION, &rSTAR, &rPLUS)))
 

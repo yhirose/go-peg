@@ -253,6 +253,7 @@ func TestEnterExitHandlers(t *testing.T) {
 	err = parser.Parse("hello=world", d)
 	pegErr, ok := err.(*Error)
 	assert(t, ok)
+	assert(t, pegErr != nil)
 	assert(t, pegErr.Details[0].Ln == 1)
 	assert(t, pegErr.Details[0].Col == 7)
 	assert(t, pegErr.Details[0].Msg == msg)
@@ -777,14 +778,23 @@ func TestUserRule(t *testing.T) {
 	syntax := " ROOT <- _ 'Hello' _ NAME '!' _ "
 
 	rules := map[string]operator{
-		"NAME": Usr(func(s string, p int, sv *Values, d Any) int {
+		"NAME": Usr(func(s string, p int, sv *Values, d Any) (int, error) {
 			names := []string{"PEG", "BNF"}
 			for _, name := range names {
 				if len(name) <= len(s)-p && name == s[p:p+len(name)] {
-					return len(name)
+					return len(name), nil
 				}
 			}
-			return -1
+			return 0, OperatorError{
+				[]string{
+					"PEG",
+					"BNF",
+				},
+				s,
+				1,
+				1,
+				3,
+			}
 		}),
 		"~_": Zom(Cls(" \t\r\n")),
 	}
@@ -1031,222 +1041,221 @@ func TestMacroExclusiveModifiers(t *testing.T) {
 	assert(t, parser.Parse("public static public", nil) != nil)
 }
 
-func match(t *testing.T, r *Rule, s string, want bool) {
+func match(t *testing.T, r *Rule, s string, want bool, remaining int) {
 	l, _, err := r.Parse(s, newData())
 	ok := err == nil
-	if ok != want {
-		t.Errorf("syntax error: %d", l)
+	if ok != want || len(s)-l != remaining {
+		t.Errorf("syntax error when parsing `%s`: %d of %d", s, l, len(s))
 	}
 }
 
 func TestPegGrammar(t *testing.T) {
-	match(t, &rStart, " Definition <- a / ( b c ) / d \n rule2 <- [a-zA-Z][a-z0-9-]+ ", true)
+	match(t, &rStart, " Definition <- a / ( b c ) / d \n rule2 <- [a-zA-Z][a-z0-9-]+ ", true, 0)
 }
 
 func TestPegDefinition(t *testing.T) {
-	match(t, &rDefinition, "Definition <- a / (b c) / d ", true)
-	match(t, &rDefinition, "Definition <- a / b c / d ", true)
-	match(t, &rDefinition, "Definition ← a ", true)
-	match(t, &rDefinition, "Definition ", false)
-	match(t, &rDefinition, " ", false)
-	match(t, &rDefinition, "", false)
-	match(t, &rDefinition, "Definition = a / (b c) / d ", false)
-	match(t, &rDefinition, "Macro(param) <- a ", true)
-	match(t, &rDefinition, "Macro (param) <- a ", false)
+	match(t, &rDefinition, "Definition <- a / (b c) / d ", true, 0)
+	match(t, &rDefinition, "Definition <- a / b c / d ", true, 0)
+	match(t, &rDefinition, "Definition ← a ", true, 0)
+	match(t, &rDefinition, "Definition ", false, 11)
+	match(t, &rDefinition, " ", false, 1)
+	match(t, &rDefinition, "", false, 0)
+	match(t, &rDefinition, "Definition = a / (b c) / d ", false, 27)
+	match(t, &rDefinition, "Macro(param) <- a ", true, 0)
+	match(t, &rDefinition, "Macro (param) <- a ", false, 19)
 }
 
 func TestPegExpression(t *testing.T) {
-	match(t, &rExpression, "a / (b c) / d ", true)
-	match(t, &rExpression, "a / b c / d ", true)
-	match(t, &rExpression, "a b ", true)
-	match(t, &rExpression, "", true)
-	match(t, &rExpression, " ", false)
-	match(t, &rExpression, " a b ", false)
+	match(t, &rExpression, "a / (b c) / d ", true, 0)
+	match(t, &rExpression, "a / b c / d ", true, 0)
+	match(t, &rExpression, "a b ", true, 0)
+	match(t, &rExpression, "", false, 0)
+	match(t, &rExpression, " ", false, 1)
+	match(t, &rExpression, " a b ", false, 5)
 }
 
 func TestPegSequence(t *testing.T) {
-	match(t, &rSequence, "a b c d ", true)
-	match(t, &rSequence, "", true)
-	match(t, &rSequence, "!", false)
-	match(t, &rSequence, "<-", false)
-	match(t, &rSequence, " a", false)
+	match(t, &rSequence, "a b c d ", true, 0)
+	match(t, &rSequence, "", false, 0)
+	match(t, &rSequence, "!", false, 1)
+	match(t, &rSequence, "<-", false, 2)
+	match(t, &rSequence, " a", false, 2)
 }
 
 func TestPegPrefix(t *testing.T) {
-	match(t, &rPrefix, "&[a]", true)
-	match(t, &rPrefix, "![']", true)
-	match(t, &rPrefix, "-[']", false)
-	match(t, &rPrefix, "", false)
-	match(t, &rPrefix, " a", false)
+	match(t, &rPrefix, "&[a]", true, 0)
+	match(t, &rPrefix, "![']", true, 0)
+	match(t, &rPrefix, "-[']", false, 4)
+	match(t, &rPrefix, "", false, 0)
+	match(t, &rPrefix, " a", false, 2)
 }
 
 func TestPegSuffix(t *testing.T) {
-	match(t, &rSuffix, "aaa ", true)
-	match(t, &rSuffix, "aaa? ", true)
-	match(t, &rSuffix, "aaa* ", true)
-	match(t, &rSuffix, "aaa+ ", true)
-	match(t, &rSuffix, ". + ", true)
-	match(t, &rSuffix, "?", false)
-	match(t, &rSuffix, "", false)
-	match(t, &rPrefix, " a", false)
+	match(t, &rSuffix, "aaa ", true, 0)
+	match(t, &rSuffix, "aaa? ", true, 0)
+	match(t, &rSuffix, "aaa* ", true, 0)
+	match(t, &rSuffix, "aaa+ ", true, 0)
+	match(t, &rSuffix, ". + ", true, 0)
+	match(t, &rSuffix, "?", false, 1)
+	match(t, &rSuffix, "", false, 0)
+	match(t, &rPrefix, " a", false, 2)
 }
 
 func TestPegPrimary(t *testing.T) {
-	match(t, &rPrimary, "_Identifier0_ ", true)
-	match(t, &rPrimary, "_Identifier0_<-", false)
-	match(t, &rPrimary, "( _Identifier0_ _Identifier1_ )", true)
-	match(t, &rPrimary, "'Literal String'", true)
-	match(t, &rPrimary, "\"Literal String\"", true)
-	match(t, &rPrimary, "[a-zA-Z]", true)
-	match(t, &rPrimary, ".", true)
-	match(t, &rPrimary, "", false)
-	match(t, &rPrimary, " ", false)
-	match(t, &rPrimary, " a", false)
-	match(t, &rPrimary, "", false)
+	match(t, &rPrimary, "_Identifier0_ ", true, 0)
+	match(t, &rPrimary, "_Identifier0_<-", false, 15)
+	match(t, &rPrimary, "( _Identifier0_ _Identifier1_ )", true, 0)
+	match(t, &rPrimary, "'Literal String'", true, 0)
+	match(t, &rPrimary, "\"Literal String\"", true, 0)
+	match(t, &rPrimary, "[a-zA-Z]", true, 0)
+	match(t, &rPrimary, ".", true, 0)
+	match(t, &rPrimary, "", false, 0)
+	match(t, &rPrimary, " ", false, 1)
+	match(t, &rPrimary, " a", false, 2)
 }
 
 func TestPegIdentifier(t *testing.T) {
-	match(t, &rIdentifier, "_Identifier0_ ", true)
-	match(t, &rIdentifier, "0Identifier_ ", false)
-	match(t, &rIdentifier, "Iden|t ", false)
-	match(t, &rIdentifier, " ", false)
-	match(t, &rIdentifier, " a", false)
-	match(t, &rIdentifier, "", false)
+	match(t, &rIdentifier, "_Identifier0_ ", true, 0)
+	match(t, &rIdentifier, "0Identifier_ ", false, 13)
+	match(t, &rIdentifier, "Iden|t ", false, 3)
+	match(t, &rIdentifier, " ", false, 1)
+	match(t, &rIdentifier, " a", false, 2)
+	match(t, &rIdentifier, "", false, 0)
 }
 
 func TestPegIdentStart(t *testing.T) {
-	match(t, &rIdentStart, "_", true)
-	match(t, &rIdentStart, "a", true)
-	match(t, &rIdentStart, "Z", true)
-	match(t, &rIdentStart, "", false)
-	match(t, &rIdentStart, " ", false)
-	match(t, &rIdentStart, "0", false)
+	match(t, &rIdentStart, "_", true, 0)
+	match(t, &rIdentStart, "a", true, 0)
+	match(t, &rIdentStart, "Z", true, 0)
+	match(t, &rIdentStart, "", false, 0)
+	match(t, &rIdentStart, " ", false, 1)
+	match(t, &rIdentStart, "0", false, 1)
 }
 
 func TestPegIdentRest(t *testing.T) {
-	match(t, &rIdentRest, "_", true)
-	match(t, &rIdentRest, "a", true)
-	match(t, &rIdentRest, "Z", true)
-	match(t, &rIdentRest, "", false)
-	match(t, &rIdentRest, " ", false)
-	match(t, &rIdentRest, "0", true)
+	match(t, &rIdentRest, "_", true, 0)
+	match(t, &rIdentRest, "a", true, 0)
+	match(t, &rIdentRest, "Z", true, 0)
+	match(t, &rIdentRest, "", false, 0)
+	match(t, &rIdentRest, " ", false, 1)
+	match(t, &rIdentRest, "0", true, 0)
 }
 
 func TestPegLiteral(t *testing.T) {
-	match(t, &rLiteral, "'abc' ", true)
-	match(t, &rLiteral, "'a\\nb\\tc' ", true)
-	match(t, &rLiteral, "'a\\277\tc' ", true)
-	match(t, &rLiteral, "'a\\77\tc' ", true)
-	match(t, &rLiteral, "'a\\80\tc' ", false)
-	match(t, &rLiteral, "'\n' ", true)
-	match(t, &rLiteral, "'a\\'b' ", true)
-	match(t, &rLiteral, "'a'b' ", false)
-	match(t, &rLiteral, "'a\"'b' ", false)
-	match(t, &rLiteral, "\"'\\\"abc\\\"'\" ", true)
-	match(t, &rLiteral, "\"'\"abc\"'\" ", false)
-	match(t, &rLiteral, "abc", false)
-	match(t, &rLiteral, "", false)
-	match(t, &rLiteral, "日本語", false)
+	match(t, &rLiteral, "'abc' ", true, 0)
+	match(t, &rLiteral, "'a\\nb\\tc' ", true, 0)
+	match(t, &rLiteral, "'a\\277\tc' ", true, 0)
+	match(t, &rLiteral, "'a\\77\tc' ", true, 0)
+	match(t, &rLiteral, "'a\\80\tc' ", false, 9)
+	match(t, &rLiteral, "'\n' ", true, 0)
+	match(t, &rLiteral, "'a\\'b' ", true, 0)
+	match(t, &rLiteral, "'a'b' ", false, 3)
+	match(t, &rLiteral, "'a\"'b' ", false, 3)
+	match(t, &rLiteral, "\"'\\\"abc\\\"'\" ", true, 0)
+	match(t, &rLiteral, "\"'\"abc\"'\" ", false, 7)
+	match(t, &rLiteral, "abc", false, 3)
+	match(t, &rLiteral, "", false, 0)
+	match(t, &rLiteral, "日本語", false, 9)
 }
 
 func TestPegClass(t *testing.T) {
-	match(t, &rClass, "[]", true)
-	match(t, &rClass, "[a]", true)
-	match(t, &rClass, "[a-z]", true)
-	match(t, &rClass, "[az]", true)
-	match(t, &rClass, "[a-zA-Z-]", true)
-	match(t, &rClass, "[a-zA-Z-0-9]", true)
-	match(t, &rClass, "[a-]", false)
-	match(t, &rClass, "[-a]", true)
-	match(t, &rClass, "[", false)
-	match(t, &rClass, "[a", false)
-	match(t, &rClass, "]", false)
-	match(t, &rClass, "a]", false)
-	match(t, &rClass, "あ-ん", false)
-	match(t, &rClass, "[-+]", true)
-	match(t, &rClass, "[+-]", false)
+	match(t, &rClass, "[]", true, 0)
+	match(t, &rClass, "[a]", true, 0)
+	match(t, &rClass, "[a-z]", true, 0)
+	match(t, &rClass, "[az]", true, 0)
+	match(t, &rClass, "[a-zA-Z-]", true, 0)
+	match(t, &rClass, "[a-zA-Z-0-9]", true, 0)
+	match(t, &rClass, "[a-]", false, 4)
+	match(t, &rClass, "[-a]", true, 0)
+	match(t, &rClass, "[", false, 1)
+	match(t, &rClass, "[a", false, 2)
+	match(t, &rClass, "]", false, 1)
+	match(t, &rClass, "a]", false, 2)
+	match(t, &rClass, "あ-ん", false, 7)
+	match(t, &rClass, "[-+]", true, 0)
+	match(t, &rClass, "[+-]", false, 4)
 }
 
 func TestPegRange(t *testing.T) {
-	match(t, &rRange, "a", true)
-	match(t, &rRange, "a-z", true)
-	match(t, &rRange, "az", false)
-	match(t, &rRange, "", false)
-	match(t, &rRange, "a-", false)
-	match(t, &rRange, "-a", false)
+	match(t, &rRange, "a", true, 0)
+	match(t, &rRange, "a-z", true, 0)
+	match(t, &rRange, "az", false, 1)
+	match(t, &rRange, "", false, 0)
+	match(t, &rRange, "a-", false, 1)
+	match(t, &rRange, "-a", false, 1)
 }
 
 func TestPegChar(t *testing.T) {
-	match(t, &rChar, "\\n", true)
-	match(t, &rChar, "\\r", true)
-	match(t, &rChar, "\\t", true)
-	match(t, &rChar, "\\f", true)
-	match(t, &rChar, "\\v", true)
-	match(t, &rChar, "\\'", true)
-	match(t, &rChar, "\\\"", true)
-	match(t, &rChar, "\\[", true)
-	match(t, &rChar, "\\]", true)
-	match(t, &rChar, "\\\\", true)
-	match(t, &rChar, "\\000", true)
-	match(t, &rChar, "\\377", true)
-	match(t, &rChar, "\\477", false)
-	match(t, &rChar, "\\087", false)
-	match(t, &rChar, "\\079", false)
-	match(t, &rChar, "\\00", true)
-	match(t, &rChar, "\\77", true)
-	match(t, &rChar, "\\80", false)
-	match(t, &rChar, "\\08", false)
-	match(t, &rChar, "\\0", true)
-	match(t, &rChar, "\\7", true)
-	match(t, &rChar, "\\8", false)
-	match(t, &rChar, "a", true)
-	match(t, &rChar, ".", true)
-	match(t, &rChar, "0", true)
-	match(t, &rChar, "\\", false)
-	match(t, &rChar, " ", true)
-	match(t, &rChar, "  ", false)
-	match(t, &rChar, "", false)
-	match(t, &rChar, "あ", false)
+	match(t, &rChar, "\\n", true, 0)
+	match(t, &rChar, "\\r", true, 0)
+	match(t, &rChar, "\\t", true, 0)
+	match(t, &rChar, "\\f", true, 0)
+	match(t, &rChar, "\\v", true, 0)
+	match(t, &rChar, "\\'", true, 0)
+	match(t, &rChar, "\\\"", true, 0)
+	match(t, &rChar, "\\[", true, 0)
+	match(t, &rChar, "\\]", true, 0)
+	match(t, &rChar, "\\\\", true, 0)
+	match(t, &rChar, "\\000", true, 0)
+	match(t, &rChar, "\\377", true, 0)
+	match(t, &rChar, "\\477", false, 1)
+	match(t, &rChar, "\\087", false, 2)
+	match(t, &rChar, "\\079", false, 1)
+	match(t, &rChar, "\\00", true, 0)
+	match(t, &rChar, "\\77", true, 0)
+	match(t, &rChar, "\\80", false, 3)
+	match(t, &rChar, "\\08", false, 1)
+	match(t, &rChar, "\\0", true, 0)
+	match(t, &rChar, "\\7", true, 0)
+	match(t, &rChar, "\\8", false, 2)
+	match(t, &rChar, "a", true, 0)
+	match(t, &rChar, ".", true, 0)
+	match(t, &rChar, "0", true, 0)
+	match(t, &rChar, "\\", false, 1)
+	match(t, &rChar, " ", true, 0)
+	match(t, &rChar, "  ", false, 1)
+	match(t, &rChar, "", false, 0)
+	match(t, &rChar, "あ", false, 2)
 }
 
 func TestPegOperators(t *testing.T) {
-	match(t, &rLEFTARROW, "<-", true)
-	match(t, &rSLASH, "/ ", true)
-	match(t, &rAND, "& ", true)
-	match(t, &rNOT, "! ", true)
-	match(t, &rQUESTION, "? ", true)
-	match(t, &rSTAR, "* ", true)
-	match(t, &rPLUS, "+ ", true)
-	match(t, &rOPEN, "( ", true)
-	match(t, &rCLOSE, ") ", true)
-	match(t, &rDOT, ". ", true)
+	match(t, &rLEFTARROW, "<-", true, 0)
+	match(t, &rSLASH, "/ ", true, 0)
+	match(t, &rAND, "& ", true, 0)
+	match(t, &rNOT, "! ", true, 0)
+	match(t, &rQUESTION, "? ", true, 0)
+	match(t, &rSTAR, "* ", true, 0)
+	match(t, &rPLUS, "+ ", true, 0)
+	match(t, &rOPEN, "( ", true, 0)
+	match(t, &rCLOSE, ") ", true, 0)
+	match(t, &rDOT, ". ", true, 0)
 }
 
 func TestPegComment(t *testing.T) {
-	match(t, &rComment, "# Comment.\n", true)
-	match(t, &rComment, "# Comment.", false)
-	match(t, &rComment, " ", false)
-	match(t, &rComment, "a", false)
+	match(t, &rComment, "# Comment.\n", true, 0)
+	match(t, &rComment, "# Comment.", false, 10)
+	match(t, &rComment, " ", false, 1)
+	match(t, &rComment, "a", false, 1)
 }
 
 func TestPegSpace(t *testing.T) {
-	match(t, &rSpace, " ", true)
-	match(t, &rSpace, "\t", true)
-	match(t, &rSpace, "\n", true)
-	match(t, &rSpace, "", false)
-	match(t, &rSpace, "a", false)
+	match(t, &rSpace, " ", true, 0)
+	match(t, &rSpace, "\t", true, 0)
+	match(t, &rSpace, "\n", true, 0)
+	match(t, &rSpace, "", false, 0)
+	match(t, &rSpace, "a", false, 1)
 }
 
 func TestPegEndOfLine(t *testing.T) {
-	match(t, &rEndOfLine, "\r\n", true)
-	match(t, &rEndOfLine, "\n", true)
-	match(t, &rEndOfLine, "\r", true)
-	match(t, &rEndOfLine, " ", false)
-	match(t, &rEndOfLine, "", false)
-	match(t, &rEndOfLine, "a", false)
+	match(t, &rEndOfLine, "\r\n", true, 0)
+	match(t, &rEndOfLine, "\n", true, 0)
+	match(t, &rEndOfLine, "\r", true, 0)
+	match(t, &rEndOfLine, " ", false, 1)
+	match(t, &rEndOfLine, "", false, 0)
+	match(t, &rEndOfLine, "a", false, 1)
 }
 
 func TestPegEndOfFile(t *testing.T) {
-	match(t, &rEndOfFile, "", true)
-	match(t, &rEndOfFile, " ", false)
+	match(t, &rEndOfFile, "", true, 0)
+	match(t, &rEndOfFile, " ", false, 1)
 }

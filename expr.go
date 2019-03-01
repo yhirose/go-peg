@@ -20,9 +20,9 @@ type expression struct {
 	action *Action
 }
 
-func (o *expression) parseExpr(s string, p int, v *Values, c *context, d Any, minPrec int) (l int) {
-	l = o.atom.parse(s, p, v, c, d)
-	if fail(l) {
+func (o *expression) parseExpr(s string, p int, v *Values, c *context, d Any, minPrec int) (l int, err error) {
+	l, err = o.atom.parse(s, p, v, c, d)
+	if err != nil {
 		return
 	}
 
@@ -47,10 +47,10 @@ func (o *expression) parseExpr(s string, p int, v *Values, c *context, d Any, mi
 		saveTs := v.Ts
 
 		chv := c.push()
-		chl := o.binop.parse(s, p+l, chv, c, d)
+		chl, e := o.binop.parse(s, p+l, chv, c, d)
 		c.pop()
 
-		if fail(chl) {
+		if e != nil {
 			c.errorPos = saveErrorPos
 			break
 		}
@@ -69,10 +69,10 @@ func (o *expression) parseExpr(s string, p int, v *Values, c *context, d Any, mi
 		}
 
 		chv = c.push()
-		chl = o.parseExpr(s, p+l, chv, c, d, nextMinPrec)
+		chl, e = o.parseExpr(s, p+l, chv, c, d, nextMinPrec)
 		c.pop()
 
-		if fail(chl) {
+		if e != nil {
 			v.Vs = saveVs
 			v.Ts = saveTs
 			c.errorPos = saveErrorPos
@@ -87,11 +87,11 @@ func (o *expression) parseExpr(s string, p int, v *Values, c *context, d Any, mi
 			v.S = s[p : p+l]
 			v.Pos = p
 
-			var err error
-			if val, err = (*o.action)(v, d); err != nil {
+			var e error
+			if val, e = (*o.action)(v, d); err != nil {
 				if c.messagePos < p {
 					c.messagePos = p
-					c.message = err.Error()
+					c.message = e.Error()
 				}
 				l = -1
 				v.Vs = saveVs
@@ -109,8 +109,8 @@ func (o *expression) parseExpr(s string, p int, v *Values, c *context, d Any, mi
 	return
 }
 
-func (o *expression) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
-	l = o.parseExpr(s, p, v, c, d, 0)
+func (o *expression) parseCore(s string, p int, v *Values, c *context, d Any) (l int, err error) {
+	l, err = o.parseExpr(s, p, v, c, d, 0)
 	return
 }
 

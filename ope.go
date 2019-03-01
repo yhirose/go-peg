@@ -1,16 +1,62 @@
 package peg
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 )
 
-func success(l int) bool {
-	return l != -1
+// Sequence Error
+type SequenceError struct {
+	Errs []error
 }
 
-func fail(l int) bool {
-	return l == -1
+func (s SequenceError) Error() string {
+	str := "Encountered a sequence error. Choices are:\n===\n\n"
+
+	var errs []string
+
+	for _, err := range s.Errs {
+		errs = append(errs, err.Error())
+	}
+
+	str = str + strings.Join(errs, "\n\n") + "\n===\n\n"
+	return str
+}
+
+// Operator Error
+type OperatorError struct {
+	Expected []string
+	Got      string
+	Line     int
+	Col      int
+	Length   int
+}
+
+func (o OperatorError) Error() string {
+	lineStart, lineEnd := printLine(o.Got, o.Line)
+	str := fmt.Sprintf("%d:%d  ", o.Line, o.Col)
+	str = str + o.Got[lineStart:lineEnd] + "\n" +
+		strings.Repeat("-", len(str)+o.Col-1)
+	str = str + strings.Repeat("^", o.Length) + "\n\n"
+	str = str + "Expected "
+
+	if len(o.Expected) > 1 {
+		str = str + "one of \"" + strings.Join(o.Expected, "\", \"")
+	} else {
+		str = str + "\"" + o.Expected[0]
+	}
+
+	endOfToken := lineStart + (o.Col - 1) + o.Length
+
+	if endOfToken > len(o.Got) {
+		endOfToken = len(o.Got)
+	}
+
+	str = str + "\", instead got \"" + o.Got[lineStart+(o.Col-1):endOfToken] +
+		"\".\n"
+	return "\n" + str
 }
 
 // Any
@@ -122,12 +168,12 @@ func (c *context) topArg() []operator {
 }
 
 // parse
-func parse(o operator, s string, p int, v *Values, c *context, d Any) (l int) {
+func parse(o operator, s string, p int, v *Values, c *context, d Any) (l int, err error) {
 	if c.tracerEnter != nil {
 		c.tracerEnter(o.Label(), s, v, d, p)
 	}
 
-	l = o.parseCore(s, p, v, c, d)
+	l, err = o.parseCore(s, p, v, c, d)
 
 	if c.tracerLeave != nil {
 		c.tracerLeave(o.Label(), s, v, d, p, l)
@@ -138,8 +184,8 @@ func parse(o operator, s string, p int, v *Values, c *context, d Any) (l int) {
 // Operator
 type operator interface {
 	Label() string
-	parse(s string, p int, v *Values, c *context, d Any) int
-	parseCore(s string, p int, v *Values, c *context, d Any) int
+	parse(s string, p int, v *Values, c *context, d Any) (int, error)
+	parseCore(s string, p int, v *Values, c *context, d Any) (int, error)
 	accept(v visitor)
 }
 
@@ -152,7 +198,7 @@ func (o *opeBase) Label() string {
 	return reflect.TypeOf(o.derived).String()[5:]
 }
 
-func (o *opeBase) parse(s string, p int, v *Values, c *context, d Any) int {
+func (o *opeBase) parse(s string, p int, v *Values, c *context, d Any) (int, error) {
 	return parse(o.derived, s, p, v, c, d)
 }
 
@@ -162,16 +208,18 @@ type sequence struct {
 	opes []operator
 }
 
-func (o *sequence) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
+func (o *sequence) parseCore(s string, p int, v *Values, c *context, d Any) (l int, err error) {
 	l = 0
+	var chl int
 	for _, ope := range o.opes {
-		chl := ope.parse(s, p+l, v, c, d)
-		if fail(chl) {
-			l = -1
+		chl, err = ope.parse(s, p+l, v, c, d)
+		if err != nil {
+			l = 0
 			return
 		}
 		l += chl
 	}
+
 	return
 }
 
@@ -185,13 +233,17 @@ type prioritizedChoice struct {
 	opes []operator
 }
 
-func (o *prioritizedChoice) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
+func (o *prioritizedChoice) parseCore(s string, p int, v *Values, c *context, d Any) (l int, err error) {
+	var opeLabels []string
+	var errs []error
+	var e error
 	id := 0
 	for _, ope := range o.opes {
+		opeLabels = append(opeLabels, ope.Label())
 		chv := c.push()
-		l = ope.parse(s, p, chv, c, d)
+		l, e = ope.parse(s, p, chv, c, d)
 		c.pop()
-		if success(l) {
+		if e == nil {
 			v.Vs = append(v.Vs, chv.Vs...)
 			v.Pos = chv.Pos
 			v.S = chv.S
@@ -199,9 +251,16 @@ func (o *prioritizedChoice) parseCore(s string, p int, v *Values, c *context, d 
 			v.Ts = append(v.Ts, chv.Ts...)
 			return
 		}
+
+		errs = append(errs, e)
 		id++
 	}
-	l = -1
+
+	l = 0
+	err = SequenceError{
+		errs,
+	}
+
 	return
 }
 
@@ -215,14 +274,14 @@ type zeroOrMore struct {
 	ope operator
 }
 
-func (o *zeroOrMore) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
+func (o *zeroOrMore) parseCore(s string, p int, v *Values, c *context, d Any) (l int, err error) {
 	saveErrorPos := c.errorPos
 	l = 0
 	for p+l < len(s) {
 		saveVs := v.Vs
 		saveTs := v.Ts
-		chl := o.ope.parse(s, p+l, v, c, d)
-		if fail(chl) {
+		chl, e := o.ope.parse(s, p+l, v, c, d)
+		if e != nil {
 			v.Vs = saveVs
 			v.Ts = saveTs
 			c.errorPos = saveErrorPos
@@ -243,17 +302,17 @@ type oneOrMore struct {
 	ope operator
 }
 
-func (o *oneOrMore) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
-	l = o.ope.parse(s, p, v, c, d)
-	if fail(l) {
+func (o *oneOrMore) parseCore(s string, p int, v *Values, c *context, d Any) (l int, err error) {
+	l, err = o.ope.parse(s, p, v, c, d)
+	if err != nil {
 		return
 	}
 	saveErrorPos := c.errorPos
 	for p+l < len(s) {
 		saveVs := v.Vs
 		saveTs := v.Ts
-		chl := o.ope.parse(s, p+l, v, c, d)
-		if fail(chl) {
+		chl, e := o.ope.parse(s, p+l, v, c, d)
+		if e != nil {
 			v.Vs = saveVs
 			v.Ts = saveTs
 			c.errorPos = saveErrorPos
@@ -274,18 +333,20 @@ type option struct {
 	ope operator
 }
 
-func (o *option) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
+func (o *option) parseCore(s string, p int, v *Values, c *context, d Any) (int, error) {
 	saveErrorPos := c.errorPos
 	saveVs := v.Vs
 	saveTs := v.Ts
-	l = o.ope.parse(s, p, v, c, d)
-	if fail(l) {
+	l, err := o.ope.parse(s, p, v, c, d)
+	if err != nil {
 		v.Vs = saveVs
 		v.Ts = saveTs
 		c.errorPos = saveErrorPos
 		l = 0
+		err = nil
 	}
-	return
+
+	return l, nil
 }
 
 func (o *option) accept(v visitor) {
@@ -298,16 +359,12 @@ type andPredicate struct {
 	ope operator
 }
 
-func (o *andPredicate) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
+func (o *andPredicate) parseCore(s string, p int, v *Values, c *context, d Any) (l int, err error) {
 	chv := c.push()
-	chl := o.ope.parse(s, p, chv, c, d)
+	_, err = o.ope.parse(s, p, chv, c, d)
 	c.pop()
 
-	if success(chl) {
-		l = 0
-	} else {
-		l = -1
-	}
+	l = 0
 	return
 }
 
@@ -321,19 +378,30 @@ type notPredicate struct {
 	ope operator
 }
 
-func (o *notPredicate) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
+func (o *notPredicate) parseCore(s string, p int, v *Values, c *context, d Any) (l int, err error) {
 	saveErrorPos := c.errorPos
 
 	chv := c.push()
-	chl := o.ope.parse(s, p, chv, c, d)
+	chl, e := o.ope.parse(s, p, chv, c, d)
 	c.pop()
 
-	if success(chl) {
+	if e == nil {
 		c.setErrorPos(p)
-		l = -1
+		l = 0
+		line, col := lineInfo(s, p)
+		err = OperatorError{
+			[]string{
+				"Not " + o.ope.Label(),
+			},
+			s,
+			line,
+			col,
+			chl,
+		}
 	} else {
 		c.errorPos = saveErrorPos
 		l = 0
+		err = nil
 	}
 	return
 }
@@ -350,26 +418,36 @@ type literalString struct {
 	isWord     bool
 }
 
-func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any) int {
+func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any) (int, error) {
 	l := 0
 	for ; l < len(o.lit); l++ {
 		if p+l == len(s) || s[p+l] != o.lit[l] {
 			c.setErrorPos(p)
-			return -1
+			line, col := lineInfo(s, p)
+
+			return 0, OperatorError{
+				[]string{
+					o.lit,
+				},
+				s,
+				line,
+				col,
+				len(o.lit),
+			}
 		}
 	}
 
 	// Word check
 	o.initIsWord.Do(func() {
 		if c.wordOpe != nil {
-			len := c.wordOpe.parse(o.lit, 0, &Values{}, &context{s: s}, nil)
-			o.isWord = success(len)
+			_, err := c.wordOpe.parse(o.lit, 0, &Values{}, &context{s: s}, nil)
+			o.isWord = err == nil
 		}
 	})
 	if o.isWord {
-		len := Npd(c.wordOpe).parse(s, p+l, v, &context{s: s}, nil)
-		if fail(len) {
-			return -1
+		len, err := Npd(c.wordOpe).parse(s, p+l, v, &context{s: s}, nil)
+		if err != nil {
+			return 0, err
 		}
 		l += len
 	}
@@ -377,14 +455,14 @@ func (o *literalString) parseCore(s string, p int, v *Values, c *context, d Any)
 	// Skip whiltespace
 	if c.inToken == false {
 		if c.whitespaceOpe != nil {
-			len := c.whitespaceOpe.parse(s, p+l, v, c, d)
-			if fail(len) {
-				return -1
+			len, err := c.whitespaceOpe.parse(s, p+l, v, c, d)
+			if err != nil {
+				return 0, err
 			}
 			l += len
 		}
 	}
-	return l
+	return l, nil
 }
 
 func (o *literalString) accept(v visitor) {
@@ -397,11 +475,22 @@ type characterClass struct {
 	chars string
 }
 
-func (o *characterClass) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
+func (o *characterClass) parseCore(s string, p int, v *Values, c *context, d Any) (l int, err error) {
 	// TODO: UTF8 support
 	if len(s)-p < 1 {
 		c.setErrorPos(p)
-		l = -1
+		l = 0
+		line, col := lineInfo(s, p)
+		err = OperatorError{
+			[]string{
+				o.chars,
+			},
+			s,
+			line,
+			col,
+			0,
+		}
+
 		return
 	}
 	ch := s[p]
@@ -422,7 +511,17 @@ func (o *characterClass) parseCore(s string, p int, v *Values, c *context, d Any
 		}
 	}
 	c.setErrorPos(p)
-	l = -1
+
+	line, col := lineInfo(s, p)
+	err = OperatorError{
+		[]string{
+			o.chars,
+		},
+		s,
+		line,
+		col,
+		1,
+	}
 	return
 }
 
@@ -435,11 +534,21 @@ type anyCharacter struct {
 	opeBase
 }
 
-func (o *anyCharacter) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
+func (o *anyCharacter) parseCore(s string, p int, v *Values, c *context, d Any) (l int, err error) {
 	// TODO: UTF8 support
 	if len(s)-p < 1 {
 		c.setErrorPos(p)
-		l = -1
+		l = 0
+		line, col := lineInfo(s, p)
+		err = OperatorError{
+			[]string{
+				"Anything",
+			},
+			s,
+			line,
+			col,
+			0,
+		}
 		return
 	}
 	l = 1
@@ -456,23 +565,23 @@ type tokenBoundary struct {
 	ope operator
 }
 
-func (o *tokenBoundary) parseCore(s string, p int, v *Values, c *context, d Any) int {
+func (o *tokenBoundary) parseCore(s string, p int, v *Values, c *context, d Any) (int, error) {
 	c.inToken = true
-	l := o.ope.parse(s, p, v, c, d)
+	l, err := o.ope.parse(s, p, v, c, d)
 	c.inToken = false
-	if success(l) {
+	if err == nil {
 		v.Ts = append(v.Ts, Token{p, s[p : p+l]})
 
 		// Skip whiltespace
 		if c.whitespaceOpe != nil {
-			len := c.whitespaceOpe.parse(s, p+l, v, c, d)
-			if fail(len) {
-				return -1
+			len, err := c.whitespaceOpe.parse(s, p+l, v, c, d)
+			if err != nil {
+				return 0, err
 			}
 			l += len
 		}
 	}
-	return l
+	return l, err
 }
 
 func (o *tokenBoundary) accept(v visitor) {
@@ -485,11 +594,11 @@ type ignore struct {
 	ope operator
 }
 
-func (o *ignore) parseCore(s string, p int, v *Values, c *context, d Any) int {
+func (o *ignore) parseCore(s string, p int, v *Values, c *context, d Any) (int, error) {
 	chv := c.push()
-	l := o.ope.parse(s, p, chv, c, d)
+	l, err := o.ope.parse(s, p, chv, c, d)
 	c.pop()
-	return l
+	return l, err
 }
 
 func (o *ignore) accept(v visitor) {
@@ -499,10 +608,10 @@ func (o *ignore) accept(v visitor) {
 // User
 type user struct {
 	opeBase
-	fn func(s string, p int, v *Values, d Any) int
+	fn func(s string, p int, v *Values, d Any) (int, error)
 }
 
-func (o *user) parseCore(s string, p int, v *Values, c *context, d Any) int {
+func (o *user) parseCore(s string, p int, v *Values, c *context, d Any) (int, error) {
 	return o.fn(s, p, v, d)
 }
 
@@ -521,12 +630,12 @@ type reference struct {
 	rule  *Rule
 }
 
-func (o *reference) parseCore(s string, p int, v *Values, c *context, d Any) (l int) {
+func (o *reference) parseCore(s string, p int, v *Values, c *context, d Any) (l int, err error) {
 	if o.rule != nil {
 		// Reference rule
 		if o.rule.Parameters == nil {
 			// Definition
-			l = o.rule.parse(s, p, v, c, d)
+			l, err = o.rule.parse(s, p, v, c, d)
 		} else {
 			// Macro
 			vis := &findReference{
@@ -542,13 +651,13 @@ func (o *reference) parseCore(s string, p int, v *Values, c *context, d Any) (l 
 			}
 
 			c.pushArgs(args)
-			l = o.rule.parse(s, p, v, c, d)
+			l, err = o.rule.parse(s, p, v, c, d)
 			c.popArgs()
 		}
 	} else {
 		// Reference parameter in macro
 		args := c.topArg()
-		l = args[o.iarg].parse(s, p, v, c, d)
+		l, err = args[o.iarg].parse(s, p, v, c, d)
 	}
 	return
 }
@@ -563,14 +672,14 @@ type whitespace struct {
 	ope operator
 }
 
-func (o *whitespace) parseCore(s string, p int, v *Values, c *context, d Any) int {
+func (o *whitespace) parseCore(s string, p int, v *Values, c *context, d Any) (int, error) {
 	if c.inWhitespace {
-		return 0
+		return 0, nil
 	} else {
 		c.inWhitespace = true
-		l := o.ope.parse(s, p, v, c, d)
+		l, err := o.ope.parse(s, p, v, c, d)
 		c.inWhitespace = false
-		return l
+		return l, err
 	}
 }
 
@@ -644,7 +753,7 @@ func Ign(ope operator) operator {
 	o.derived = o
 	return o
 }
-func Usr(fn func(s string, p int, v *Values, d Any) int) operator {
+func Usr(fn func(s string, p int, v *Values, d Any) (int, error)) operator {
 	o := &user{fn: fn}
 	o.derived = o
 	return o

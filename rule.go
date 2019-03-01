@@ -66,28 +66,15 @@ func (r *Rule) Parse(s string, d Any) (l int, val Any, err error) {
 		ope = Seq(r.WhitespaceOpe, r) // Skip whitespace at beginning
 	}
 
-	l = ope.parse(s, 0, v, c, d)
+	l, err = ope.parse(s, 0, v, c, d)
 
-	if success(l) && len(v.Vs) > 0 && v.Vs[0] != nil {
+	if err == nil && len(v.Vs) > 0 && v.Vs[0] != nil {
 		val = v.Vs[0]
 	}
 
-	if fail(l) || l != len(s) {
-		var pos int
-		var msg string
-		if fail(l) {
-			if c.messagePos > -1 {
-				pos = c.messagePos
-				msg = c.message
-			} else {
-				msg = "syntax error"
-				pos = c.errorPos
-			}
-		} else {
-			msg = "not exact match"
-			pos = l
-		}
-		ln, col := lineInfo(s, pos)
+	if l != len(s) && err == nil {
+		msg := "not exact match"
+		ln, col := lineInfo(s, l)
 		err = &Error{}
 		err.(*Error).Details = append(err.(*Error).Details, ErrorDetail{ln, col, msg})
 	}
@@ -99,11 +86,11 @@ func (o *Rule) Label() string {
 	return fmt.Sprintf("[%s]", o.Name)
 }
 
-func (o *Rule) parse(s string, p int, v *Values, c *context, d Any) int {
+func (o *Rule) parse(s string, p int, v *Values, c *context, d Any) (int, error) {
 	return parse(o, s, p, v, c, d)
 }
 
-func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
+func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) (int, error) {
 	// Macro reference
 	if r.Parameters != nil {
 		return r.Ope.parse(s, p, v, c, d)
@@ -115,40 +102,38 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 
 	chv := c.push()
 
-	l := r.Ope.parse(s, p, chv, c, d)
+	l, err := r.Ope.parse(s, p, chv, c, d)
 
 	// Invoke action
 	var val Any
+	var intErr error
 
-	if success(l) {
+	if err == nil {
 		if r.Action != nil && !r.disableAction {
 			chv.S = s[p : p+l]
 			chv.Pos = p
 
-			var err error
-			if val, err = r.Action(chv, d); err != nil {
-				if c.messagePos < p {
-					c.messagePos = p
-					c.message = err.Error()
-				}
-				l = -1
+			if val, intErr = r.Action(chv, d); intErr != nil {
+				ln, col := lineInfo(s, p)
+
+				err = &Error{}
+				err.(*Error).Details = append(err.(*Error).Details,
+					ErrorDetail{ln, col, intErr.Error()})
+
+				l = 0
 			}
 		} else if len(chv.Vs) > 0 {
 			val = chv.Vs[0]
 		}
-	}
 
-	if success(l) {
 		if r.Ignore == false {
 			v.Vs = append(v.Vs, val)
 		}
-	} else {
-		if r.Message != nil {
-			if c.messagePos < p {
-				c.messagePos = p
-				c.message = r.Message()
-			}
-		}
+	} else if r.Message != nil && c.messagePos < p {
+		ln, col := lineInfo(s, p)
+
+		err = &Error{}
+		err.(*Error).Details = append(err.(*Error).Details, ErrorDetail{ln, col, r.Message()})
 	}
 
 	c.pop()
@@ -157,7 +142,7 @@ func (r *Rule) parseCore(s string, p int, v *Values, c *context, d Any) int {
 		r.Leave(d)
 	}
 
-	return l
+	return l, err
 }
 
 func (r *Rule) accept(v visitor) {
@@ -196,4 +181,24 @@ func lineInfo(s string, curPos int) (ln int, col int) {
 
 	col = pos - colStartPos + 1
 	return
+}
+
+// printLine
+func printLine(s string, line int) (int, int) {
+	currentLine := 1
+	currentOffset := 0
+	lineLength := 0
+
+	for currentLine < line && currentOffset < len(s) {
+		if s[currentOffset] == '\n' {
+			currentLine++
+		}
+		currentOffset++
+	}
+
+	for currentOffset+lineLength < len(s) && s[currentOffset+lineLength] != '\n' {
+		lineLength++
+	}
+
+	return currentOffset, currentOffset + lineLength
 }

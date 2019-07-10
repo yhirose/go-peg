@@ -764,6 +764,17 @@ func TestLeftRecursiveWithZom(t *testing.T) {
 	assert(t, err != nil)
 }
 
+func TestLeftRecursiveWithZOMContentRule(t *testing.T) {
+	parser, err := NewParser(`
+        A <- B
+        B <- _ A
+        _ <- ' '* # Zero or more
+    `)
+
+	assert(t, parser == nil)
+	assert(t, err != nil)
+}
+
 func TestLeftRecursiveWithEmptyString(t *testing.T) {
 	parser, err := NewParser(`
         " A <- '' A"

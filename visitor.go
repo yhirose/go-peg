@@ -129,6 +129,9 @@ func (v *detectLeftRecursion) visitReference(ope *reference) {
 		v.refs[ope.name] = true
 		if ope.rule != nil {
 			ope.rule.accept(v)
+      if v.done == false {
+        return
+      }
 		}
 	}
 	v.done = true

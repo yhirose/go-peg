@@ -1,6 +1,8 @@
 go-peg
 ======
 
+**NOTE**: This library is **deprecated**. Please use [**cpp-peblib**](https://github.com/yhirose/cpp-peglib) instead.
+
 Yet another [PEG](http://en.wikipedia.org/wiki/Parsing_expression_grammar) (Parsing Expression Grammars) parser generator for Go.
 
 If you need a PEG grammar checker, you may want to check [**peglint**](https://github.com/yhirose/go-peg/tree/master/cmd/peglint).
